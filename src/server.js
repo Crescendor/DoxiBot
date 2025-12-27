@@ -65,8 +65,14 @@ app.get('/auth/kick/callback', async (req, res) => {
         console.log(`Creating channel: userId=${userId}, username=${username}`);
         await db.createChannel(userId, username, tokens.access_token, tokens.refresh_token, tokens.expires_in || 3600);
 
+        // Subscribe to webhook events
         try {
-            await kickApi.sendMessageToChannel(userId, tokens.access_token, '🎮 DoxiRPG Bot aktif! !yardim ile komutları öğren.');
+            await kickApi.subscribeToEvents(userId, tokens.access_token);
+            console.log('[OAuth] Event subscription completed');
+        } catch (e) { console.log('Event subscription error:', e.message); }
+
+        try {
+            await kickApi.sendMessageToChannel(userId, tokens.access_token, '🎮 DoxiRPG Bot aktif! !yardim yazarak komutları öğren.');
         } catch (e) { console.log('Welcome message error:', e.message); }
 
         res.redirect(`/?success=1&channel=${userId}&username=${username}`);

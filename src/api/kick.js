@@ -33,9 +33,47 @@ export const kickApi = {
         return response.json();
     },
 
-    // Validate webhook signature (if needed)
-    validateWebhookSignature(payload, signature, timestamp) {
-        // TODO: Implement HMAC validation with KICK_WEBHOOK_SECRET
-        return true;
+    // Subscribe to webhook events for a channel
+    async subscribeToEvents(channelId, accessToken) {
+        const webhookUrl = `${config.publicUrl}/webhook`;
+        const events = ['chat.message.sent'];
+
+        console.log(`[Kick] Subscribing to events for channel ${channelId}`);
+        console.log(`[Kick] Webhook URL: ${webhookUrl}`);
+
+        for (const event of events) {
+            try {
+                const response = await fetch(`${KICK_API_BASE}/events/subscriptions`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        event: event,
+                        broadcaster_user_id: channelId,
+                        method: 'webhook'
+                    })
+                });
+
+                const text = await response.text();
+                console.log(`[Kick] Subscribe ${event}: ${response.status} - ${text}`);
+
+                if (!response.ok && response.status !== 409) { // 409 = already subscribed
+                    console.error(`[Kick] Failed to subscribe to ${event}`);
+                }
+            } catch (e) {
+                console.error(`[Kick] Subscribe error for ${event}:`, e.message);
+            }
+        }
+    },
+
+    // Get current subscriptions
+    async getSubscriptions(accessToken) {
+        const response = await fetch(`${KICK_API_BASE}/events/subscriptions`, {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        return response.json();
     }
 };
+
