@@ -14,10 +14,16 @@ export const kickApi = {
 
     // Send message to a specific channel using their token
     async sendMessageToChannel(channelId, accessToken, content, replyTo = null) {
-        const body = { content, type: 'bot' };
+        const body = {
+            broadcaster_user_id: parseInt(channelId),
+            content,
+            type: 'bot'
+        };
         if (replyTo) body.reply_to_message_id = replyTo;
 
-        const response = await fetch(`${KICK_API_BASE}/channels/${channelId}/messages`, {
+        console.log(`[Kick] Sending message to channel ${channelId}`);
+
+        const response = await fetch(`${KICK_API_BASE}/chat`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
@@ -28,9 +34,13 @@ export const kickApi = {
 
         if (!response.ok) {
             const text = await response.text();
+            console.error(`[Kick] Send message error: ${response.status} - ${text}`);
             throw new Error(`Kick API error: ${response.status} - ${text}`);
         }
-        return response.json();
+
+        const result = await response.json();
+        console.log(`[Kick] Message sent: ${result?.data?.message_id}`);
+        return result;
     },
 
     // Subscribe to webhook events for a channel
