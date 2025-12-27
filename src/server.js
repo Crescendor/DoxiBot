@@ -30,24 +30,46 @@ app.get('/auth/kick/callback', async (req, res) => {
         if (!code) return res.send('<html><body><h1>Hata</h1><p>Kod yok</p><a href="/">Geri</a></body></html>');
 
         const tokens = await exchangeCodeForTokens(code);
+        console.log('Tokens received:', { access_token: tokens.access_token?.substring(0, 20) + '...', expires_in: tokens.expires_in });
 
         let userInfo = null;
         try {
             userInfo = await kickApi.getCurrentUserWithToken(tokens.access_token);
-        } catch (e) { console.log('User info error:', e.message); }
-
-        if (userInfo?.data?.[0]) {
-            const user = userInfo.data[0];
-            await db.createChannel(user.user_id, user.username, tokens.access_token, tokens.refresh_token, tokens.expires_in);
-
-            try {
-                await kickApi.sendMessageToChannel(user.user_id, tokens.access_token, '🎮 DoxiRPG Bot aktif! !yardim ile komutları öğren.');
-            } catch (e) { console.log('Welcome message error:', e.message); }
-
-            res.redirect(`/?success=1&channel=${user.user_id}&username=${user.username}`);
-        } else {
-            res.redirect('/?error=user_info');
+            console.log('User info response:', JSON.stringify(userInfo, null, 2));
+        } catch (e) {
+            console.error('User info error:', e.message);
+            return res.send(`<html><body><h1>Hata</h1><p>Kullanıcı bilgisi alınamadı: ${e.message}</p><a href="/">Geri</a></body></html>`);
         }
+
+        // Handle different API response formats
+        let user = null;
+        if (userInfo?.data?.[0]) {
+            user = userInfo.data[0];
+        } else if (userInfo?.data) {
+            user = userInfo.data;
+        } else if (userInfo?.user) {
+            user = userInfo.user;
+        } else if (userInfo?.id || userInfo?.user_id) {
+            user = userInfo;
+        }
+
+        // Extract user ID and username
+        const userId = user?.user_id || user?.id || user?.channel_id;
+        const username = user?.username || user?.name || user?.slug || 'Unknown';
+
+        if (!userId) {
+            console.error('No user ID found in response:', userInfo);
+            return res.send(`<html><body><h1>Hata</h1><p>Kullanıcı ID bulunamadı</p><pre>${JSON.stringify(userInfo, null, 2)}</pre><a href="/">Geri</a></body></html>`);
+        }
+
+        console.log(`Creating channel: userId=${userId}, username=${username}`);
+        await db.createChannel(userId, username, tokens.access_token, tokens.refresh_token, tokens.expires_in || 3600);
+
+        try {
+            await kickApi.sendMessageToChannel(userId, tokens.access_token, '🎮 DoxiRPG Bot aktif! !yardim ile komutları öğren.');
+        } catch (e) { console.log('Welcome message error:', e.message); }
+
+        res.redirect(`/?success=1&channel=${userId}&username=${username}`);
     } catch (error) {
         console.error('OAuth error:', error);
         res.send(`<html><body><h1>Hata</h1><p>${error.message}</p><a href="/">Geri</a></body></html>`);
