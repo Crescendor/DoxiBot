@@ -25,7 +25,7 @@ export function getAuthorizationUrl() {
         client_id: config.kickClientId,
         redirect_uri: config.kickRedirectUri,
         response_type: 'code',
-        scope: 'user:read channel:read channel:write chat:read chat:write',
+        scope: 'user:read channel:read channel:write chat:read chat:write events:subscribe streamkey:read',
         state,
         code_challenge: codeChallenge,
         code_challenge_method: 'S256'
