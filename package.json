@@ -1,0 +1,21 @@
+{
+  "name": "doxirpg",
+  "version": "1.0.0",
+  "description": "Text-based RPG game for Kick.com chat",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.2",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "open": "^10.0.0",
+    "pg": "^8.16.3",
+    "sql.js": "^1.10.0"
+  },
+  "author": "Doxish",
+  "license": "MIT"
+}

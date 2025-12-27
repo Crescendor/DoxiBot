@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DoxiRPG Admin - Multi-Tenant Bot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="logo">
+        <span class="logo-icon">🎮</span>
+        <span class="logo-text">DoxiRPG</span>
+      </div>
+
+      <!-- Channel Selector (Super Admin sees all) -->
+      <div class="channel-selector">
+        <label>Kanal:</label>
+        <select id="channel-select" class="input" onchange="switchChannel()">
+          <option value="">Seçin...</option>
+        </select>
+      </div>
+
+      <nav class="nav">
+        <div class="nav-section">Ana Menü</div>
+        <a href="#" class="nav-item active" data-page="dashboard">
+          <span class="nav-icon">📊</span><span>Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" data-page="commands">
+          <span class="nav-icon">💬</span><span>Komutlar</span>
+        </a>
+        <a href="#" class="nav-item" data-page="players">
+          <span class="nav-icon">👥</span><span>Oyuncular</span>
+        </a>
+        <a href="#" class="nav-item" data-page="leaderboard">
+          <span class="nav-icon">🏆</span><span>Sıralama</span>
+        </a>
+        <a href="#" class="nav-item" data-page="chat">
+          <span class="nav-icon">📝</span><span>Chat Log</span>
+        </a>
+        <a href="#" class="nav-item" data-page="test">
+          <span class="nav-icon">🧪</span><span>Test</span>
+        </a>
+
+        <div class="nav-section">Super Admin</div>
+        <a href="#" class="nav-item" data-page="channels">
+          <span class="nav-icon">📺</span><span>Tüm Kanallar</span>
+        </a>
+        <a href="#" class="nav-item" data-page="setup">
+          <span class="nav-icon">⚙️</span><span>Kurulum</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button id="login-btn" class="btn btn-primary btn-block">
+          <span>🔐</span> Bot'u Aktifleştir
+        </button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="header">
+        <h1 id="page-title">Dashboard</h1>
+        <div class="header-actions">
+          <span id="current-channel" class="channel-badge"></span>
+        </div>
+      </header>
+
+      <div class="content">
+        <!-- Dashboard -->
+        <div id="page-dashboard" class="page active">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon">👥</div>
+              <div class="stat-info"><span class="stat-value" id="stat-players">0</span><span
+                  class="stat-label">Oyuncu</span></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">⚔️</div>
+              <div class="stat-info"><span class="stat-value" id="stat-battles">0</span><span class="stat-label">Aktif
+                  Savaş</span></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">⭐</div>
+              <div class="stat-info"><span class="stat-value" id="stat-level">0</span><span class="stat-label">Max
+                  Seviye</span></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">🎣</div>
+              <div class="stat-info"><span class="stat-value" id="stat-fishing">0</span><span
+                  class="stat-label">Balıkçı</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3>🏆 Top 5</h3>
+            </div>
+            <div class="card-body">
+              <div id="top-players" class="player-list">
+                <div class="empty-state">Oyuncu yok</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Commands (Per-Channel with Descriptions) -->
+        <div id="page-commands" class="page">
+          <div class="card">
+            <div class="card-header">
+              <h3>💬 Komut Yönetimi</h3>
+              <span class="hint">Her komut ayrı ayrı açılıp kapatılabilir</span>
+            </div>
+            <div class="card-body">
+              <div id="commands-list" class="commands-editor"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Players -->
+        <div id="page-players" class="page">
+          <div class="card full-height">
+            <div class="card-header">
+              <h3>👥 Oyuncular</h3><button class="btn btn-small" onclick="loadPlayers()">🔄</button>
+            </div>
+            <div class="card-body">
+              <div id="players-list" class="data-table"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Leaderboard -->
+        <div id="page-leaderboard" class="page">
+          <div class="card full-height">
+            <div class="card-header">
+              <h3>🏆 Sıralama</h3>
+            </div>
+            <div class="card-body">
+              <div id="leaderboard" class="leaderboard"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Log -->
+        <div id="page-chat" class="page">
+          <div class="card full-height">
+            <div class="card-header">
+              <h3>📝 Chat Log</h3><button class="btn btn-small" onclick="loadChatLog()">🔄</button>
+            </div>
+            <div class="card-body">
+              <div id="chat-log" class="chat-log"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Test -->
+        <div id="page-test" class="page">
+          <div class="card">
+            <div class="card-header">
+              <h3>🧪 Komut Test</h3>
+            </div>
+            <div class="card-body">
+              <div class="test-form">
+                <div class="form-row">
+                  <div class="form-group"><label>Kullanıcı</label><input type="text" id="test-username" value="TestUser"
+                      class="input"></div>
+                  <div class="form-group"><label>ID</label><input type="number" id="test-userid" value="12345"
+                      class="input"></div>
+                </div>
+                <div class="form-group"><label>Komut</label><input type="text" id="test-command"
+                    placeholder="!kayit warrior" class="input"></div>
+                <button class="btn btn-primary" onclick="testCommand()">▶️ Test Et</button>
+              </div>
+              <div id="test-result" class="test-result hidden">
+                <h4>Sonuç:</h4>
+                <pre id="test-response"></pre>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3>⚡ Hızlı Test</h3>
+            </div>
+            <div class="card-body">
+              <div class="quick-commands">
+                <button class="btn" onclick="quickTest('!kayit warrior')">!kayit</button>
+                <button class="btn" onclick="quickTest('!profil')">!profil</button>
+                <button class="btn" onclick="quickTest('!av')">!av</button>
+                <button class="btn" onclick="quickTest('!saldir')">!saldir</button>
+                <button class="btn" onclick="quickTest('!balik')">!balik</button>
+                <button class="btn" onclick="quickTest('!dukkan')">!dukkan</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- All Channels (Super Admin) -->
+        <div id="page-channels" class="page">
+          <div class="card">
+            <div class="card-header">
+              <h3>📺 Tüm Kanallar</h3><button class="btn btn-small" onclick="loadChannels()">🔄</button>
+            </div>
+            <div class="card-body">
+              <div id="channels-list" class="data-table"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Setup -->
+        <div id="page-setup" class="page">
+          <div class="card">
+            <div class="card-header">
+              <h3>⚙️ Webhook Ayarları</h3>
+            </div>
+            <div class="card-body">
+              <p>Kick Developer Panel'e aşağıdaki URL'leri ekleyin:</p>
+              <div class="setup-item">
+                <label>Redirect URI:</label>
+                <div class="webhook-url"><code id="redirect-uri">-</code><button class="btn btn-small"
+                    onclick="copyUrl('redirect-uri')">📋</button></div>
+              </div>
+              <div class="setup-item">
+                <label>Webhook URL:</label>
+                <div class="webhook-url"><code id="webhook-url">-</code><button class="btn btn-small"
+                    onclick="copyUrl('webhook-url')">📋</button></div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h3>📖 Bilgi</h3>
+            </div>
+            <div class="card-body">
+              <p><strong>Super Admin:</strong> Doxish</p>
+              <p><strong>Bot:</strong> DoxiBot</p>
+              <p>Her kullanıcı kendi kanalında bağımsız ayarlar yapabilir.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeModal()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">Modal</h3><button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
