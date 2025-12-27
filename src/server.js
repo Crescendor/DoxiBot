@@ -80,14 +80,26 @@ app.get('/auth/kick/callback', async (req, res) => {
 app.post('/webhook', async (req, res) => {
     try {
         const eventType = req.headers['kick-event-type'];
-        console.log(`[Webhook] ${eventType}`);
+        console.log(`[Webhook] Event: ${eventType}`);
+        console.log(`[Webhook] Headers:`, JSON.stringify(req.headers, null, 2));
+        console.log(`[Webhook] Body:`, JSON.stringify(req.body, null, 2));
 
         if (eventType === 'chat.message.sent') {
             const channelId = req.body.broadcaster?.user_id;
-            if (!channelId) return res.status(200).json({ received: true });
+            console.log(`[Chat] Channel ID: ${channelId}`);
+
+            if (!channelId) {
+                console.log('[Chat] No channel ID found');
+                return res.status(200).json({ received: true });
+            }
 
             const channel = await db.getChannel(channelId);
-            if (!channel || !channel.bot_enabled) return res.status(200).json({ received: true });
+            console.log(`[Chat] Channel found: ${channel ? 'yes' : 'no'}, enabled: ${channel?.bot_enabled}`);
+
+            if (!channel || !channel.bot_enabled) {
+                console.log('[Chat] Channel not found or bot disabled');
+                return res.status(200).json({ received: true });
+            }
 
             const message = {
                 message_id: req.body.message_id,
@@ -97,12 +109,13 @@ app.post('/webhook', async (req, res) => {
                 created_at: req.body.created_at
             };
 
-            console.log(`[${channel.owner_username}] ${message.sender.username}: ${message.content}`);
+            console.log(`[Chat] ${channel.owner_username} | ${message.sender?.username}: ${message.content}`);
             const response = await processCommand(channelId, message);
 
             if (response) {
+                console.log(`[Bot] Sending response: ${response.substring(0, 50)}...`);
                 await kickApi.sendMessageToChannel(channelId, channel.access_token, response, message.message_id);
-                console.log('[Bot] Response sent');
+                console.log('[Bot] Response sent successfully');
             }
         }
         res.status(200).json({ received: true });
@@ -110,6 +123,11 @@ app.post('/webhook', async (req, res) => {
         console.error('[Webhook Error]', error);
         res.status(200).json({ received: true, error: error.message });
     }
+});
+
+// Webhook test endpoint
+app.get('/webhook', (req, res) => {
+    res.json({ status: 'Webhook endpoint active', timestamp: Date.now() });
 });
 
 // ========== API ROUTES ==========
