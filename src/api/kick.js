@@ -35,36 +35,38 @@ export const kickApi = {
 
     // Subscribe to webhook events for a channel
     async subscribeToEvents(channelId, accessToken) {
-        const webhookUrl = `${config.publicUrl}/webhook`;
-        const events = ['chat.message.sent'];
-
         console.log(`[Kick] Subscribing to events for channel ${channelId}`);
-        console.log(`[Kick] Webhook URL: ${webhookUrl}`);
+        console.log(`[Kick] PUBLIC_URL: ${config.publicUrl}`);
 
-        for (const event of events) {
-            try {
-                const response = await fetch(`${KICK_API_BASE}/events/subscriptions`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        event: event,
-                        broadcaster_user_id: channelId,
-                        method: 'webhook'
-                    })
-                });
+        try {
+            const response = await fetch(`${KICK_API_BASE}/events/subscriptions`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    broadcaster_user_id: parseInt(channelId),
+                    events: [
+                        { name: 'chat.message.sent', version: 1 }
+                    ],
+                    method: 'webhook'
+                })
+            });
 
-                const text = await response.text();
-                console.log(`[Kick] Subscribe ${event}: ${response.status} - ${text}`);
+            const text = await response.text();
+            console.log(`[Kick] Subscribe response: ${response.status} - ${text}`);
 
-                if (!response.ok && response.status !== 409) { // 409 = already subscribed
-                    console.error(`[Kick] Failed to subscribe to ${event}`);
-                }
-            } catch (e) {
-                console.error(`[Kick] Subscribe error for ${event}:`, e.message);
+            if (!response.ok) {
+                console.error(`[Kick] Failed to subscribe: ${response.status}`);
+            } else {
+                console.log('[Kick] Successfully subscribed to chat.message.sent');
             }
+
+            return response.ok;
+        } catch (e) {
+            console.error(`[Kick] Subscribe error:`, e.message);
+            return false;
         }
     },
 
