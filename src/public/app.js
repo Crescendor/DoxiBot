@@ -37,7 +37,8 @@ function navigateTo(page) {
   const titles = {
     dashboard: 'Dashboard', commands: '💬 Komutlar', players: '👥 Oyuncular',
     leaderboard: '🏆 Sıralama', chat: '📝 Chat Log', test: '🧪 Test',
-    items: '🎒 Eşyalar', quests: '📋 Görevler', shop: '🏪 Dükkan', pshop: '💎 Premium Dükkan',
+    items: '🎒 Eşyalar', monsters: '👹 Canavarlar', quests: '📋 Görevler',
+    shop: '🏪 Dükkan', pshop: '💎 Premium Dükkan',
     channels: '📺 Tüm Kanallar', setup: '⚙️ Kurulum'
   };
   document.getElementById('page-title').textContent = titles[page] || page;
@@ -49,6 +50,7 @@ function navigateTo(page) {
   if (page === 'channels') loadChannels();
   if (page === 'dashboard') loadDashboard();
   if (page === 'items') loadItems();
+  if (page === 'monsters') loadMonsters();
   if (page === 'quests') loadQuests();
   if (page === 'shop') loadShop();
   if (page === 'pshop') loadPremiumShop();
@@ -726,4 +728,152 @@ async function togglePremiumItem(itemId, inShop) {
     body: JSON.stringify({ id: itemId, premiumShop: inShop })
   });
   showNotification(inShop ? '✅ Premium dükkana eklendi' : '❌ Premium dükkandn çıkarıldı', 'success');
+}
+
+// ========== MONSTERS ==========
+let allMonsters = [];
+
+async function loadMonsters() {
+  try {
+    const res = await fetch('/api/admin/monsters');
+    const data = await res.json();
+    allMonsters = data.builtIn || [];
+
+    filterMonsters();
+  } catch (e) {
+    document.getElementById('monsters-list').innerHTML = '<div class="empty-state">Yüklenemedi</div>';
+  }
+}
+
+function filterMonsters() {
+  const filter = document.getElementById('monster-level-filter').value;
+  let monsters = allMonsters;
+
+  if (filter) {
+    const minLevel = parseInt(filter);
+    if (minLevel === 1) monsters = allMonsters.filter(m => m.minLevel >= 1 && m.minLevel < 10);
+    else if (minLevel === 10) monsters = allMonsters.filter(m => m.minLevel >= 10 && m.minLevel < 30);
+    else if (minLevel === 30) monsters = allMonsters.filter(m => m.minLevel >= 30 && m.minLevel < 50);
+    else if (minLevel === 50) monsters = allMonsters.filter(m => m.minLevel >= 50);
+  }
+
+  document.getElementById('monsters-list').innerHTML = monsters.length > 0 ? monsters.map(m => `
+    <div class="monster-card" onclick="editMonster('${m.id}')">
+      <div class="monster-emoji">${m.emoji || '👹'}</div>
+      <div class="monster-info">
+        <div class="monster-name">${esc(m.name)}</div>
+        <div class="monster-level">Lv.${m.minLevel}-${m.maxLevel || m.minLevel}</div>
+      </div>
+      <div class="monster-stats">
+        <span>❤️${m.hp}</span>
+        <span>⚔️${m.atk}</span>
+        <span>🛡️${m.def}</span>
+      </div>
+      <div class="monster-rewards">
+        <span>${m.gold?.[0] || 0}-${m.gold?.[1] || 0}💰</span>
+        <span>${m.exp || 0}⭐</span>
+      </div>
+    </div>
+  `).join('') : '<div class="empty-state">Canavar bulunamadı</div>';
+}
+
+function editMonster(monsterId) {
+  const m = allMonsters.find(x => x.id === monsterId);
+  if (!m) return;
+
+  openModal('👹 ' + m.name, `
+    <div class="monster-preview" style="text-align:center;font-size:4rem;margin-bottom:1rem">${m.emoji || '👹'}</div>
+    <div class="form-row">
+      <div class="form-group"><label>İsim</label><input type="text" id="edit-mon-name" class="input" value="${esc(m.name)}"></div>
+      <div class="form-group"><label>Emoji</label><input type="text" id="edit-mon-emoji" class="input" value="${m.emoji || ''}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Min Level</label><input type="number" id="edit-mon-minlv" class="input" value="${m.minLevel || 1}"></div>
+      <div class="form-group"><label>Max Level</label><input type="number" id="edit-mon-maxlv" class="input" value="${m.maxLevel || m.minLevel || 1}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>HP</label><input type="number" id="edit-mon-hp" class="input" value="${m.hp || 100}"></div>
+      <div class="form-group"><label>Saldırı</label><input type="number" id="edit-mon-atk" class="input" value="${m.atk || 10}"></div>
+      <div class="form-group"><label>Savunma</label><input type="number" id="edit-mon-def" class="input" value="${m.def || 5}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Min Altın</label><input type="number" id="edit-mon-goldmin" class="input" value="${m.gold?.[0] || 10}"></div>
+      <div class="form-group"><label>Max Altın</label><input type="number" id="edit-mon-goldmax" class="input" value="${m.gold?.[1] || 20}"></div>
+      <div class="form-group"><label>EXP</label><input type="number" id="edit-mon-exp" class="input" value="${m.exp || 20}"></div>
+    </div>
+    <div class="form-group"><label>Spawn Oranı (%)</label><input type="number" id="edit-mon-spawn" class="input" value="${m.spawnChance || 50}"></div>
+    <button class="btn btn-primary" onclick="saveMonster('${monsterId}')">💾 Kaydet</button>
+  `);
+}
+
+async function saveMonster(monsterId) {
+  const monsterData = {
+    id: monsterId,
+    name: document.getElementById('edit-mon-name').value,
+    emoji: document.getElementById('edit-mon-emoji').value,
+    minLevel: parseInt(document.getElementById('edit-mon-minlv').value) || 1,
+    maxLevel: parseInt(document.getElementById('edit-mon-maxlv').value) || 1,
+    hp: parseInt(document.getElementById('edit-mon-hp').value) || 100,
+    atk: parseInt(document.getElementById('edit-mon-atk').value) || 10,
+    def: parseInt(document.getElementById('edit-mon-def').value) || 5,
+    gold: [
+      parseInt(document.getElementById('edit-mon-goldmin').value) || 10,
+      parseInt(document.getElementById('edit-mon-goldmax').value) || 20
+    ],
+    exp: parseInt(document.getElementById('edit-mon-exp').value) || 20,
+    spawnChance: parseInt(document.getElementById('edit-mon-spawn').value) || 50
+  };
+
+  await fetch(`/api/admin/channel/${currentChannelId}/monster/${monsterId}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(monsterData)
+  });
+
+  closeModal(); loadMonsters(); showNotification('✅ Kaydedildi!', 'success');
+}
+
+function openAddMonsterModal() {
+  openModal('➕ Yeni Canavar', `
+    <div class="form-row">
+      <div class="form-group"><label>ID</label><input type="text" id="new-mon-id" class="input" placeholder="goblin_1"></div>
+      <div class="form-group"><label>İsim</label><input type="text" id="new-mon-name" class="input" placeholder="Goblin"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Emoji</label><input type="text" id="new-mon-emoji" class="input" value="👺"></div>
+      <div class="form-group"><label>Min Level</label><input type="number" id="new-mon-level" class="input" value="1"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>HP</label><input type="number" id="new-mon-hp" class="input" value="100"></div>
+      <div class="form-group"><label>ATK</label><input type="number" id="new-mon-atk" class="input" value="10"></div>
+      <div class="form-group"><label>DEF</label><input type="number" id="new-mon-def" class="input" value="5"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>EXP</label><input type="number" id="new-mon-exp" class="input" value="20"></div>
+      <div class="form-group"><label>Altın</label><input type="number" id="new-mon-gold" class="input" value="15"></div>
+    </div>
+    <button class="btn btn-primary" onclick="addNewMonster()">➕ Ekle</button>
+  `);
+}
+
+async function addNewMonster() {
+  const monsterData = {
+    id: document.getElementById('new-mon-id').value,
+    name: document.getElementById('new-mon-name').value,
+    emoji: document.getElementById('new-mon-emoji').value,
+    minLevel: parseInt(document.getElementById('new-mon-level').value) || 1,
+    maxLevel: parseInt(document.getElementById('new-mon-level').value) || 1,
+    hp: parseInt(document.getElementById('new-mon-hp').value) || 100,
+    atk: parseInt(document.getElementById('new-mon-atk').value) || 10,
+    def: parseInt(document.getElementById('new-mon-def').value) || 5,
+    exp: parseInt(document.getElementById('new-mon-exp').value) || 20,
+    gold: [parseInt(document.getElementById('new-mon-gold').value) || 15, parseInt(document.getElementById('new-mon-gold').value) * 2 || 30],
+    spawnChance: 50
+  };
+
+  await fetch(`/api/admin/channel/${currentChannelId}/monster/${monsterData.id}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(monsterData)
+  });
+
+  closeModal(); loadMonsters(); showNotification('✅ Eklendi!', 'success');
 }

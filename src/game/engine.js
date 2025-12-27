@@ -13,9 +13,28 @@ function formatTime(seconds) {
     return `${Math.floor(seconds / 3600)}sa ${Math.floor((seconds % 3600) / 60)}dk`;
 }
 
+// VERY HARD exponential XP curve
+// Level 1-10: Easy (100-1000 XP)
+// Level 10-30: Medium (1k-50k XP)
+// Level 30-50: Hard (50k-500k XP)
+// Level 50-70: Very Hard (500k-5M XP)
+// Level 70-90: Extreme (5M-50M XP)
+// Level 90-99: Legendary (50M-500M XP)
 function expForLevel(level) {
     if (level >= LEVEL_CAP) return Infinity;
-    return Math.floor(100 * Math.pow(1.15, level - 1) + level * 50);
+
+    // Base: 100 XP, Multiplier: 1.25 per level, Additional exponential scaling
+    const base = 100;
+    const multiplier = Math.pow(1.25, level - 1);
+    const exponentialScale = Math.pow(level / 10, 2); // Quadratic scaling on top
+
+    // Add milestone jumps at certain levels
+    let milestoneMultiplier = 1;
+    if (level >= 50) milestoneMultiplier = 3;
+    if (level >= 70) milestoneMultiplier = 10;
+    if (level >= 90) milestoneMultiplier = 50;
+
+    return Math.floor(base * multiplier * (1 + exponentialScale) * milestoneMultiplier);
 }
 
 function calculateDamage(attacker, defender) {

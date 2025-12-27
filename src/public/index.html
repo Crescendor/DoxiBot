@@ -50,6 +50,9 @@
         <a href="#" class="nav-item" data-page="items">
           <span class="nav-icon">🎒</span><span>Eşyalar</span>
         </a>
+        <a href="#" class="nav-item" data-page="monsters">
+          <span class="nav-icon">👹</span><span>Canavarlar</span>
+        </a>
         <a href="#" class="nav-item" data-page="quests">
           <span class="nav-icon">📋</span><span>Görevler</span>
         </a>
@@ -231,6 +234,28 @@
             </div>
             <div class="card-body">
               <div id="items-list" class="items-grid"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monsters -->
+        <div id="page-monsters" class="page">
+          <div class="card">
+            <div class="card-header">
+              <h3>👹 Canavarlar</h3>
+              <div class="filter-row">
+                <select id="monster-level-filter" class="input" onchange="filterMonsters()">
+                  <option value="">Tümü</option>
+                  <option value="1">Lv.1-10</option>
+                  <option value="10">Lv.10-30</option>
+                  <option value="30">Lv.30-50</option>
+                  <option value="50">Lv.50+</option>
+                </select>
+                <button class="btn btn-primary" onclick="openAddMonsterModal()">+ Yeni Canavar</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div id="monsters-list" class="monsters-grid"></div>
             </div>
           </div>
         </div>
