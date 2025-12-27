@@ -1125,3 +1125,202 @@ select.input {
   font-size: 14px;
   color: #a855f7;
 }
+
+/* Items Grid */
+.items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.item-card {
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.item-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  background: var(--bg-card-hover);
+}
+
+.item-icon {
+  font-size: 2.5rem;
+  margin-bottom: 8px;
+}
+
+.item-name {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.item-type {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.item-stats {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.item-price {
+  font-weight: 600;
+  color: var(--warning);
+}
+
+/* Filter Row */
+.filter-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.filter-row select {
+  width: auto;
+  min-width: 140px;
+}
+
+/* Quests */
+.quests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quest-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quest-card:hover {
+  border-color: var(--accent);
+  background: var(--bg-card-hover);
+}
+
+.quest-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.quest-icon {
+  font-size: 1.5rem;
+}
+
+.quest-name {
+  font-weight: 600;
+}
+
+.quest-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.quest-reward {
+  font-size: 12px;
+  color: var(--success);
+}
+
+/* Shop Grid */
+.shop-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shop-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.shop-item:hover {
+  border-color: var(--accent);
+  background: var(--bg-card-hover);
+}
+
+.shop-item.premium {
+  border-color: #a855f7;
+  background: rgba(168, 85, 247, 0.05);
+}
+
+.shop-item.premium:hover {
+  border-color: #c084fc;
+  background: rgba(168, 85, 247, 0.1);
+}
+
+.shop-icon {
+  font-size: 2rem;
+}
+
+.shop-info {
+  flex: 1;
+}
+
+.shop-name {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.shop-stats {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.shop-price {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--warning);
+}
+
+.shop-price.gem {
+  color: #a855f7;
+}
+
+/* Form row */
+.form-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.form-row .form-group {
+  flex: 1;
+  min-width: 120px;
+}
+
+/* Checkbox style */
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}

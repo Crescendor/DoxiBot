@@ -46,6 +46,20 @@
           <span class="nav-icon">🧪</span><span>Test</span>
         </a>
 
+        <div class="nav-section">Oyun İçeriği</div>
+        <a href="#" class="nav-item" data-page="items">
+          <span class="nav-icon">🎒</span><span>Eşyalar</span>
+        </a>
+        <a href="#" class="nav-item" data-page="quests">
+          <span class="nav-icon">📋</span><span>Görevler</span>
+        </a>
+        <a href="#" class="nav-item" data-page="shop">
+          <span class="nav-icon">🏪</span><span>Dükkan</span>
+        </a>
+        <a href="#" class="nav-item" data-page="pshop">
+          <span class="nav-icon">💎</span><span>Premium Dükkan</span>
+        </a>
+
         <div class="nav-section">Super Admin</div>
         <a href="#" class="nav-item" data-page="channels">
           <span class="nav-icon">📺</span><span>Tüm Kanallar</span>
@@ -193,6 +207,69 @@
                 <button class="btn" onclick="quickTest('!balik')">!balik</button>
                 <button class="btn" onclick="quickTest('!dukkan')">!dukkan</button>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Items -->
+        <div id="page-items" class="page">
+          <div class="card">
+            <div class="card-header">
+              <h3>🎒 Eşyalar</h3>
+              <div class="filter-row">
+                <select id="item-type-filter" class="input" onchange="filterItems()">
+                  <option value="">Tümü</option>
+                  <option value="weapon">Silahlar</option>
+                  <option value="armor">Zırhlar</option>
+                  <option value="accessory">Aksesuarlar</option>
+                  <option value="consumable">Tüketilebilir</option>
+                  <option value="fishing">Balıkçılık</option>
+                  <option value="premium">Premium</option>
+                </select>
+                <button class="btn btn-primary" onclick="openAddItemModal()">+ Yeni Eşya</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div id="items-list" class="items-grid"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quests -->
+        <div id="page-quests" class="page">
+          <div class="card">
+            <div class="card-header">
+              <h3>📋 Görevler</h3>
+              <button class="btn btn-primary" onclick="openAddQuestModal()">+ Yeni Görev</button>
+            </div>
+            <div class="card-body">
+              <div id="quests-list" class="quests-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Shop -->
+        <div id="page-shop" class="page">
+          <div class="card">
+            <div class="card-header">
+              <h3>🏪 Dükkan (Altın)</h3>
+              <span class="hint">Oyuncuların altınla satın alabileceği eşyalar</span>
+            </div>
+            <div class="card-body">
+              <div id="shop-items" class="shop-grid"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Premium Shop -->
+        <div id="page-pshop" class="page">
+          <div class="card">
+            <div class="card-header">
+              <h3>💎 Premium Dükkan (DoxiGem)</h3>
+              <span class="hint">Oyuncuların DoxiGem ile satın alabileceği eşyalar</span>
+            </div>
+            <div class="card-body">
+              <div id="pshop-items" class="shop-grid"></div>
             </div>
           </div>
         </div>

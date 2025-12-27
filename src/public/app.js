@@ -37,6 +37,7 @@ function navigateTo(page) {
   const titles = {
     dashboard: 'Dashboard', commands: '💬 Komutlar', players: '👥 Oyuncular',
     leaderboard: '🏆 Sıralama', chat: '📝 Chat Log', test: '🧪 Test',
+    items: '🎒 Eşyalar', quests: '📋 Görevler', shop: '🏪 Dükkan', pshop: '💎 Premium Dükkan',
     channels: '📺 Tüm Kanallar', setup: '⚙️ Kurulum'
   };
   document.getElementById('page-title').textContent = titles[page] || page;
@@ -47,6 +48,10 @@ function navigateTo(page) {
   if (page === 'chat') loadChatLog();
   if (page === 'channels') loadChannels();
   if (page === 'dashboard') loadDashboard();
+  if (page === 'items') loadItems();
+  if (page === 'quests') loadQuests();
+  if (page === 'shop') loadShop();
+  if (page === 'pshop') loadPremiumShop();
 }
 
 async function loadStatus() {
@@ -397,4 +402,328 @@ function showNotification(message, type = 'info') {
   }
   document.body.appendChild(n);
   setTimeout(() => { n.style.animation = 'slideIn .3s ease reverse'; setTimeout(() => n.remove(), 300); }, 3000);
+}
+
+// ========== ITEMS ==========
+let allItems = [];
+let allQuests = [];
+
+async function loadItems() {
+  try {
+    const res = await fetch('/api/admin/items');
+    const data = await res.json();
+    allItems = data.builtIn || [];
+
+    filterItems();
+  } catch (e) {
+    document.getElementById('items-list').innerHTML = '<div class="empty-state">Yüklenemedi</div>';
+  }
+}
+
+function filterItems() {
+  const filter = document.getElementById('item-type-filter').value;
+  const items = filter ? allItems.filter(i => i.type === filter) : allItems;
+
+  const rarityColors = { common: '#9ca3af', uncommon: '#22c55e', rare: '#3b82f6', epic: '#8b5cf6', legendary: '#f59e0b' };
+
+  document.getElementById('items-list').innerHTML = items.length > 0 ? items.map(item => `
+    <div class="item-card" onclick="editItem('${item.id}')" style="border-color: ${rarityColors[item.rarity] || '#9ca3af'}">
+      <div class="item-icon">${item.emoji || '📦'}</div>
+      <div class="item-name">${esc(item.name)}</div>
+      <div class="item-type">${item.type}</div>
+      <div class="item-stats">
+        ${item.attack ? `⚔️${item.attack}` : ''}
+        ${item.defense ? `🛡️${item.defense}` : ''}
+        ${item.hp ? `❤️${item.hp}` : ''}
+      </div>
+      <div class="item-price">${item.price || 0}💰</div>
+    </div>
+  `).join('') : '<div class="empty-state">Eşya bulunamadı</div>';
+}
+
+function editItem(itemId) {
+  const item = allItems.find(i => i.id === itemId);
+  if (!item) return;
+
+  openModal('🎒 ' + item.name, `
+    <div class="item-preview" style="text-align:center;font-size:3rem;margin-bottom:1rem">${item.emoji || '📦'}</div>
+    <div class="form-row">
+      <div class="form-group"><label>İsim</label><input type="text" id="edit-item-name" class="input" value="${esc(item.name)}"></div>
+      <div class="form-group"><label>Emoji</label><input type="text" id="edit-item-emoji" class="input" value="${item.emoji || ''}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Tip</label>
+        <select id="edit-item-type" class="input">
+          <option value="weapon" ${item.type === 'weapon' ? 'selected' : ''}>Silah</option>
+          <option value="armor" ${item.type === 'armor' ? 'selected' : ''}>Zırh</option>
+          <option value="accessory" ${item.type === 'accessory' ? 'selected' : ''}>Aksesuar</option>
+          <option value="consumable" ${item.type === 'consumable' ? 'selected' : ''}>Tüketilebilir</option>
+          <option value="fishing" ${item.type === 'fishing' ? 'selected' : ''}>Balık</option>
+          <option value="premium" ${item.type === 'premium' ? 'selected' : ''}>Premium</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Nadirlik</label>
+        <select id="edit-item-rarity" class="input">
+          <option value="common" ${item.rarity === 'common' ? 'selected' : ''}>Common</option>
+          <option value="uncommon" ${item.rarity === 'uncommon' ? 'selected' : ''}>Uncommon</option>
+          <option value="rare" ${item.rarity === 'rare' ? 'selected' : ''}>Rare</option>
+          <option value="epic" ${item.rarity === 'epic' ? 'selected' : ''}>Epic</option>
+          <option value="legendary" ${item.rarity === 'legendary' ? 'selected' : ''}>Legendary</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Saldırı</label><input type="number" id="edit-item-attack" class="input" value="${item.attack || 0}"></div>
+      <div class="form-group"><label>Savunma</label><input type="number" id="edit-item-defense" class="input" value="${item.defense || 0}"></div>
+      <div class="form-group"><label>HP</label><input type="number" id="edit-item-hp" class="input" value="${item.hp || 0}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Fiyat (Altın)</label><input type="number" id="edit-item-price" class="input" value="${item.price || 0}"></div>
+      <div class="form-group"><label>Gem Fiyatı</label><input type="number" id="edit-item-gem" class="input" value="${item.gemPrice || 0}"></div>
+    </div>
+    <div class="form-group"><label>Açıklama</label><textarea id="edit-item-desc" class="input">${esc(item.description || '')}</textarea></div>
+    <div class="form-row">
+      <label class="checkbox"><input type="checkbox" id="edit-item-shop" ${item.shopItem ? 'checked' : ''}> Dükkanda Satışta</label>
+      <label class="checkbox"><input type="checkbox" id="edit-item-pshop" ${item.premiumShop ? 'checked' : ''}> Premium Dükkanda</label>
+    </div>
+    <button class="btn btn-primary" onclick="saveItem('${itemId}')">💾 Kaydet</button>
+  `);
+}
+
+async function saveItem(itemId) {
+  const itemData = {
+    id: itemId,
+    name: document.getElementById('edit-item-name').value,
+    emoji: document.getElementById('edit-item-emoji').value,
+    type: document.getElementById('edit-item-type').value,
+    rarity: document.getElementById('edit-item-rarity').value,
+    attack: parseInt(document.getElementById('edit-item-attack').value) || 0,
+    defense: parseInt(document.getElementById('edit-item-defense').value) || 0,
+    hp: parseInt(document.getElementById('edit-item-hp').value) || 0,
+    price: parseInt(document.getElementById('edit-item-price').value) || 0,
+    gemPrice: parseInt(document.getElementById('edit-item-gem').value) || 0,
+    description: document.getElementById('edit-item-desc').value,
+    shopItem: document.getElementById('edit-item-shop').checked,
+    premiumShop: document.getElementById('edit-item-pshop').checked
+  };
+
+  await fetch(`/api/admin/channel/${currentChannelId}/item/${itemId}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(itemData)
+  });
+
+  closeModal(); loadItems(); showNotification('✅ Kaydedildi!', 'success');
+}
+
+function openAddItemModal() {
+  openModal('➕ Yeni Eşya', `
+    <div class="form-row">
+      <div class="form-group"><label>ID</label><input type="text" id="new-item-id" class="input" placeholder="sword_1"></div>
+      <div class="form-group"><label>İsim</label><input type="text" id="new-item-name" class="input" placeholder="Kılıç"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Emoji</label><input type="text" id="new-item-emoji" class="input" value="⚔️"></div>
+      <div class="form-group"><label>Tip</label>
+        <select id="new-item-type" class="input">
+          <option value="weapon">Silah</option>
+          <option value="armor">Zırh</option>
+          <option value="accessory">Aksesuar</option>
+          <option value="consumable">Tüketilebilir</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Fiyat</label><input type="number" id="new-item-price" class="input" value="100"></div>
+      <div class="form-group"><label>Saldırı</label><input type="number" id="new-item-attack" class="input" value="5"></div>
+    </div>
+    <button class="btn btn-primary" onclick="addNewItem()">➕ Ekle</button>
+  `);
+}
+
+async function addNewItem() {
+  const itemData = {
+    id: document.getElementById('new-item-id').value,
+    name: document.getElementById('new-item-name').value,
+    emoji: document.getElementById('new-item-emoji').value,
+    type: document.getElementById('new-item-type').value,
+    price: parseInt(document.getElementById('new-item-price').value) || 0,
+    attack: parseInt(document.getElementById('new-item-attack').value) || 0,
+    rarity: 'common'
+  };
+
+  await fetch(`/api/admin/channel/${currentChannelId}/item/${itemData.id}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(itemData)
+  });
+
+  closeModal(); loadItems(); showNotification('✅ Eklendi!', 'success');
+}
+
+// ========== QUESTS ==========
+async function loadQuests() {
+  try {
+    const res = await fetch('/api/admin/quests');
+    const data = await res.json();
+    allQuests = data.builtIn || [];
+
+    document.getElementById('quests-list').innerHTML = allQuests.length > 0 ? allQuests.map(q => `
+      <div class="quest-card" onclick="editQuest('${q.id}')">
+        <div class="quest-header">
+          <span class="quest-icon">${q.emoji || '📋'}</span>
+          <span class="quest-name">${esc(q.name)}</span>
+        </div>
+        <div class="quest-desc">${esc(q.description || '')}</div>
+        <div class="quest-reward">Ödül: ${q.goldReward || 0}💰 ${q.xpReward || 0}⭐</div>
+      </div>
+    `).join('') : '<div class="empty-state">Görev bulunamadı</div>';
+  } catch (e) {
+    document.getElementById('quests-list').innerHTML = '<div class="empty-state">Yüklenemedi</div>';
+  }
+}
+
+function editQuest(questId) {
+  const q = allQuests.find(x => x.id === questId);
+  if (!q) return;
+
+  openModal('📋 ' + q.name, `
+    <div class="form-row">
+      <div class="form-group"><label>İsim</label><input type="text" id="edit-quest-name" class="input" value="${esc(q.name)}"></div>
+      <div class="form-group"><label>Emoji</label><input type="text" id="edit-quest-emoji" class="input" value="${q.emoji || ''}"></div>
+    </div>
+    <div class="form-group"><label>Açıklama</label><textarea id="edit-quest-desc" class="input">${esc(q.description || '')}</textarea></div>
+    <div class="form-group"><label>Hedef</label><input type="text" id="edit-quest-target" class="input" value="${q.target || ''}"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Hedef Sayısı</label><input type="number" id="edit-quest-count" class="input" value="${q.targetCount || 1}"></div>
+      <div class="form-group"><label>Altın Ödülü</label><input type="number" id="edit-quest-gold" class="input" value="${q.goldReward || 0}"></div>
+      <div class="form-group"><label>XP Ödülü</label><input type="number" id="edit-quest-xp" class="input" value="${q.xpReward || 0}"></div>
+    </div>
+    <button class="btn btn-primary" onclick="saveQuest('${questId}')">💾 Kaydet</button>
+  `);
+}
+
+async function saveQuest(questId) {
+  const questData = {
+    id: questId,
+    name: document.getElementById('edit-quest-name').value,
+    emoji: document.getElementById('edit-quest-emoji').value,
+    description: document.getElementById('edit-quest-desc').value,
+    target: document.getElementById('edit-quest-target').value,
+    targetCount: parseInt(document.getElementById('edit-quest-count').value) || 1,
+    goldReward: parseInt(document.getElementById('edit-quest-gold').value) || 0,
+    xpReward: parseInt(document.getElementById('edit-quest-xp').value) || 0
+  };
+
+  await fetch(`/api/admin/channel/${currentChannelId}/quest/${questId}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(questData)
+  });
+
+  closeModal(); loadQuests(); showNotification('✅ Kaydedildi!', 'success');
+}
+
+function openAddQuestModal() {
+  openModal('➕ Yeni Görev', `
+    <div class="form-row">
+      <div class="form-group"><label>ID</label><input type="text" id="new-quest-id" class="input" placeholder="quest_1"></div>
+      <div class="form-group"><label>İsim</label><input type="text" id="new-quest-name" class="input" placeholder="Canavar Avcısı"></div>
+    </div>
+    <div class="form-group"><label>Açıklama</label><textarea id="new-quest-desc" class="input" placeholder="10 canavar öldür"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Altın</label><input type="number" id="new-quest-gold" class="input" value="100"></div>
+      <div class="form-group"><label>XP</label><input type="number" id="new-quest-xp" class="input" value="50"></div>
+    </div>
+    <button class="btn btn-primary" onclick="addNewQuest()">➕ Ekle</button>
+  `);
+}
+
+async function addNewQuest() {
+  const questData = {
+    id: document.getElementById('new-quest-id').value,
+    name: document.getElementById('new-quest-name').value,
+    description: document.getElementById('new-quest-desc').value,
+    goldReward: parseInt(document.getElementById('new-quest-gold').value) || 0,
+    xpReward: parseInt(document.getElementById('new-quest-xp').value) || 0,
+    target: 'monster', targetCount: 10
+  };
+
+  await fetch(`/api/admin/channel/${currentChannelId}/quest/${questData.id}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(questData)
+  });
+
+  closeModal(); loadQuests(); showNotification('✅ Eklendi!', 'success');
+}
+
+// ========== SHOP ==========
+async function loadShop() {
+  try {
+    const res = await fetch('/api/admin/items');
+    const data = await res.json();
+    const shopItems = (data.builtIn || []).filter(i => i.shopItem || i.price > 0);
+
+    document.getElementById('shop-items').innerHTML = shopItems.length > 0 ? shopItems.map(item => `
+      <div class="shop-item" onclick="editShopItem('${item.id}')">
+        <div class="shop-icon">${item.emoji || '📦'}</div>
+        <div class="shop-info">
+          <div class="shop-name">${esc(item.name)}</div>
+          <div class="shop-stats">${item.attack ? `⚔️${item.attack}` : ''} ${item.defense ? `🛡️${item.defense}` : ''}</div>
+        </div>
+        <div class="shop-price">${item.price || 0}💰</div>
+        <label class="toggle-switch" onclick="event.stopPropagation()">
+          <input type="checkbox" ${item.shopItem ? 'checked' : ''} onchange="toggleShopItem('${item.id}', this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    `).join('') : '<div class="empty-state">Dükkanda satışta eşya yok</div>';
+  } catch (e) {
+    document.getElementById('shop-items').innerHTML = '<div class="empty-state">Yüklenemedi</div>';
+  }
+}
+
+async function toggleShopItem(itemId, inShop) {
+  await fetch(`/api/admin/channel/${currentChannelId}/item/${itemId}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: itemId, shopItem: inShop })
+  });
+  showNotification(inShop ? '✅ Dükkana eklendi' : '❌ Dükkandn çıkarıldı', 'success');
+}
+
+function editShopItem(itemId) {
+  const item = allItems.find(i => i.id === itemId);
+  if (!item) { loadItems().then(() => editItem(itemId)); return; }
+  editItem(itemId);
+}
+
+// ========== PREMIUM SHOP ==========
+async function loadPremiumShop() {
+  try {
+    const res = await fetch('/api/admin/items');
+    const data = await res.json();
+    const pshopItems = (data.builtIn || []).filter(i => i.premiumShop || i.gemPrice > 0);
+
+    document.getElementById('pshop-items').innerHTML = pshopItems.length > 0 ? pshopItems.map(item => `
+      <div class="shop-item premium" onclick="editItem('${item.id}')">
+        <div class="shop-icon">${item.emoji || '💎'}</div>
+        <div class="shop-info">
+          <div class="shop-name">${esc(item.name)}</div>
+          <div class="shop-stats">${item.attack ? `⚔️${item.attack}` : ''} ${item.defense ? `🛡️${item.defense}` : ''}</div>
+        </div>
+        <div class="shop-price gem">${item.gemPrice || 0}💎</div>
+        <label class="toggle-switch" onclick="event.stopPropagation()">
+          <input type="checkbox" ${item.premiumShop ? 'checked' : ''} onchange="togglePremiumItem('${item.id}', this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    `).join('') : '<div class="empty-state">Premium dükkanda eşya yok</div>';
+  } catch (e) {
+    document.getElementById('pshop-items').innerHTML = '<div class="empty-state">Yüklenemedi</div>';
+  }
+}
+
+async function togglePremiumItem(itemId, inShop) {
+  await fetch(`/api/admin/channel/${currentChannelId}/item/${itemId}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: itemId, premiumShop: inShop })
+  });
+  showNotification(inShop ? '✅ Premium dükkana eklendi' : '❌ Premium dükkandn çıkarıldı', 'success');
 }
