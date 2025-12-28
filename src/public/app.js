@@ -1356,36 +1356,45 @@ async function deletePool(poolName) {
 
 // ========== GAME TOGGLE ==========
 async function loadGameStatus() {
+  console.log('[loadGameStatus] currentChannelId:', currentChannelId);
   if (!currentChannelId) return;
 
   try {
-    const res = await fetch(`/api/admin/channel/${currentChannelId}/game-status`);
+    const url = `/api/admin/channel/${currentChannelId}/game-status`;
+    console.log('[loadGameStatus] Fetching:', url);
+    const res = await fetch(url);
     const data = await res.json();
+    console.log('[loadGameStatus] Response:', data);
 
     document.getElementById('game-enabled-toggle').checked = data.game_enabled;
     document.getElementById('game-status-text').textContent = data.game_enabled ? 'Açık' : 'Kapalı';
 
     // Update channel name in toggle text
-    const ch = channels.find(c => c.channel_id === currentChannelId);
+    const ch = channels.find(c => String(c.id) === String(currentChannelId));
     if (ch) {
       const nameSpan = document.getElementById('current-channel-name-toggle');
-      if (nameSpan) nameSpan.textContent = ch.owner_username || ch.username || 'Bilinmeyen';
+      if (nameSpan) nameSpan.textContent = ch.username || 'Bilinmeyen';
     }
   } catch (e) {
-    console.error('Game status error:', e);
+    console.error('[loadGameStatus] Error:', e);
   }
 }
 
 async function toggleGame(enabled) {
+  console.log('[toggleGame] enabled:', enabled, 'currentChannelId:', currentChannelId);
   if (!currentChannelId) {
     showNotification('Önce kanal seçin', 'error');
     return;
   }
 
-  await fetch(`/api/admin/channel/${currentChannelId}/game-toggle`, {
+  const url = `/api/admin/channel/${currentChannelId}/game-toggle`;
+  console.log('[toggleGame] Posting to:', url);
+  const res = await fetch(url, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ enabled })
   });
+  const result = await res.json();
+  console.log('[toggleGame] Response:', result);
 
   document.getElementById('game-status-text').textContent = enabled ? 'Açık' : 'Kapalı';
   showNotification(enabled ? '🎮 RPG Oyun açıldı!' : '⏸️ RPG Oyun kapatıldı', 'success');
