@@ -53,9 +53,8 @@ export async function processVariables(channelId, response, sender) {
     result = result.replace(/\{kullanici\}/gi, sender?.username || 'Kullanıcı');
 
     // {rastgele[x,y]} - Random number between x and y
-    const randomPattern = /\{rastgele\[(\d+),(\d+)\]\}/gi;
-    let match;
-    while ((match = randomPattern.exec(result)) !== null) {
+    const randomMatches = [...result.matchAll(/\{rastgele\[(\d+),(\d+)\]\}/gi)];
+    for (const match of randomMatches) {
         const min = parseInt(match[1]);
         const max = parseInt(match[2]);
         const random = Math.floor(Math.random() * (max - min + 1)) + min;
@@ -63,39 +62,38 @@ export async function processVariables(channelId, response, sender) {
     }
 
     // {havuz[x]} - Random from pool
-    const poolPattern = /\{havuz\[([^\]]+)\]\}/gi;
-    while ((match = poolPattern.exec(result)) !== null) {
+    const poolMatches = [...result.matchAll(/\{havuz\[([^\]]+)\]\}/gi)];
+    for (const match of poolMatches) {
         const poolName = match[1];
         const pool = await db.getPool(channelId, poolName);
         if (pool && pool.values) {
             const values = pool.values.split(',').map(v => v.trim()).filter(v => v);
-            const random = values[Math.floor(Math.random() * values.length)] || poolName;
-            result = result.replace(match[0], random);
+            const randomValue = values[Math.floor(Math.random() * values.length)] || poolName;
+            result = result.replace(match[0], randomValue);
         } else {
             result = result.replace(match[0], `[havuz "${poolName}" bulunamadı]`);
         }
     }
 
     // {sayaç[x]} - Counter
-    const counterPattern = /\{sayaç\[([^\]]+)\]\}/gi;
-    while ((match = counterPattern.exec(result)) !== null) {
+    const counterMatches = [...result.matchAll(/\{sayaç\[([^\]]+)\]\}/gi)];
+    for (const match of counterMatches) {
         const counterName = match[1];
         const count = await db.incrementCounter(channelId, counterName);
         result = result.replace(match[0], count.toString());
     }
 
     // {sayac[x]} - Alternative spelling
-    const counterPattern2 = /\{sayac\[([^\]]+)\]\}/gi;
-    while ((match = counterPattern2.exec(result)) !== null) {
+    const counterMatches2 = [...result.matchAll(/\{sayac\[([^\]]+)\]\}/gi)];
+    for (const match of counterMatches2) {
         const counterName = match[1];
         const count = await db.incrementCounter(channelId, counterName);
         result = result.replace(match[0], count.toString());
     }
-
     // {nekadarkaldi[date]} - Time remaining until date
     // Format: YYYY-MM-DD HH:mm or YYYY,MM,DD HH:mm
-    const countdownPattern = /\{nekadarkaldi\[([^\]]+)\]\}/gi;
-    while ((match = countdownPattern.exec(result)) !== null) {
+    const countdownMatches = [...result.matchAll(/\{nekadarkaldi\[([^\]]+)\]\}/gi)];
+    for (const match of countdownMatches) {
         const dateStr = match[1].trim();
         let targetDate;
 
