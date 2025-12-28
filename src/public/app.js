@@ -127,8 +127,13 @@ async function populateChannelSelector() {
 function switchChannel() {
   const select = document.getElementById('channel-select');
   const newSlug = select.value;
+  console.log('[switchChannel] newSlug:', newSlug, 'currentChannelSlug:', currentChannelSlug);
   if (newSlug && newSlug !== currentChannelSlug) {
-    window.location.href = `/adminview/${newSlug}`;
+    const targetUrl = `/adminview/${newSlug}`;
+    console.log('[switchChannel] Navigating to:', targetUrl);
+    window.location.href = targetUrl;
+  } else {
+    console.log('[switchChannel] No navigation needed or same channel');
   }
 }
 
