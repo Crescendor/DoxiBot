@@ -443,22 +443,22 @@ export const db = {
         );
     },
 
-    async updateCommandResponse(channelId, originalCommand, response, newCommand = null) {
+    async updateCommandResponse(channelId, originalCommand, response, newCommand = null, description = null) {
         const cid = String(channelId);
-        console.log(`[DB] updateCommandResponse: channel=${cid}, original=${originalCommand}, new=${newCommand}, response length=${response?.length}`);
+        console.log(`[DB] updateCommandResponse: channel=${cid}, original=${originalCommand}, new=${newCommand}, response length=${response?.length}, desc=${description?.substring(0, 20)}`);
 
         if (newCommand && newCommand !== originalCommand) {
-            // Update both command name and response
+            // Update command name, response, and optionally description
             const result = await pool.query(
-                'UPDATE channel_commands SET command = $1, response = $2 WHERE channel_id = $3::BIGINT AND command = $4',
-                [newCommand, response, cid, originalCommand]
+                'UPDATE channel_commands SET command = $1, response = $2, description = COALESCE($5, description) WHERE channel_id = $3::BIGINT AND command = $4',
+                [newCommand, response, cid, originalCommand, description]
             );
             console.log(`[DB] updateCommandResponse rows affected: ${result.rowCount}`);
         } else {
-            // Update only response
+            // Update response and optionally description
             const result = await pool.query(
-                'UPDATE channel_commands SET response = $1 WHERE channel_id = $2::BIGINT AND command = $3',
-                [response, cid, originalCommand]
+                'UPDATE channel_commands SET response = $1, description = COALESCE($4, description) WHERE channel_id = $2::BIGINT AND command = $3',
+                [response, cid, originalCommand, description]
             );
             console.log(`[DB] updateCommandResponse rows affected: ${result.rowCount}`);
         }

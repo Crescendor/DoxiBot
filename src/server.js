@@ -551,8 +551,9 @@ app.post('/api/admin/channel/:id/command/:cmd/toggle', async (req, res) => {
 app.put('/api/admin/channel/:id/command/:cmd', async (req, res) => {
     try {
         const { id: channelId, cmd: originalCommand } = req.params;
-        const { response, command: newCommand } = req.body;
-        await db.updateCommandResponse(channelId, originalCommand, response, newCommand);
+        const { response, command: newCommand, description } = req.body;
+        console.log('[API] PUT command:', { channelId, originalCommand, newCommand, responseLen: response?.length, description: description?.substring(0, 20) });
+        await db.updateCommandResponse(channelId, originalCommand, response, newCommand, description);
         res.json({ success: true });
     } catch (e) {
         console.error('[API] updateCommand error:', e);

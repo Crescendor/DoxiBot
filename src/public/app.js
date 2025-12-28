@@ -302,7 +302,7 @@ async function loadCommands() {
             <span class="toggle-slider"></span>
           </label>
         </div>
-        <div class="command-description">${cmd.description || 'Açıklama yok'}</div>
+        <input type="text" class="input cmd-desc-input" data-cmd="${cmd.command}" value="${esc(cmd.description || '')}" placeholder="Komut açıklaması..." style="margin-bottom: 8px; font-size: 12px; color: #999;">
         <textarea class="input command-response" data-cmd="${cmd.command}" placeholder="Yanıt şablonu...">${esc(cmd.response || '')}</textarea>
         <button class="btn btn-small" onclick="saveCommand('${cmd.command}')">💾 Kaydet</button>
       </div>
@@ -338,21 +338,28 @@ async function saveCommand(originalCommand) {
 
   const nameInput = document.querySelector(`.cmd-name-input[data-original="${originalCommand}"]`);
   const responseTextarea = document.querySelector(`.command-response[data-cmd="${originalCommand}"]`);
+  const descInput = document.querySelector(`.cmd-desc-input[data-cmd="${originalCommand}"]`);
 
   const newCommand = nameInput ? nameInput.value.trim().toLowerCase() : originalCommand;
   const response = responseTextarea ? responseTextarea.value : '';
+  const description = descInput ? descInput.value : '';
+
+  console.log('[saveCommand] Saving:', { originalCommand, newCommand, response: response.substring(0, 50), description });
 
   const res = await fetch(`/api/admin/channel/${currentChannelId}/command/${originalCommand}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ command: newCommand, response })
+    body: JSON.stringify({ command: newCommand, response, description })
   });
+
+  const data = await res.json();
+  console.log('[saveCommand] Response:', data);
 
   if (res.ok) {
     showNotification('✅ Kaydedildi!', 'success');
     loadCommands();
   } else {
-    showNotification('❌ Kayıt hatası!', 'error');
+    showNotification('❌ Kayıt hatası: ' + (data.error || ''), 'error');
   }
 }
 
