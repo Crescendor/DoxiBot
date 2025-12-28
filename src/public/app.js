@@ -581,18 +581,33 @@ let allQuests = [];
 
 async function loadItems() {
   try {
-    // Önce veritabanından çek
-    let res = await fetch('/api/admin/game/items');
+    // Her zaman built-in itemleri yükle
+    let res = await fetch('/api/admin/items');
+    const data = await res.json();
+    let builtInItems = data.builtIn || [];
+
+    // Veritabanındaki özelleştirmeleri çek
+    res = await fetch('/api/admin/game/items');
     let dbItems = await res.json();
 
-    // Eğer veritabanı boşsa, built-in'leri kullan
-    if (!dbItems || dbItems.length === 0 || dbItems.error) {
-      res = await fetch('/api/admin/items');
-      const data = await res.json();
-      allItems = data.builtIn || [];
-    } else {
-      allItems = dbItems;
+    // API hata döndürdüyse boş array yap
+    if (!Array.isArray(dbItems)) {
+      dbItems = [];
     }
+
+    // DB'deki itemleri built-in üzerine merge et (DB öncelikli)
+    const dbItemsMap = new Map(dbItems.map(item => [item.id, item]));
+    allItems = builtInItems.map(item => {
+      const dbVersion = dbItemsMap.get(item.id);
+      return dbVersion ? { ...item, ...dbVersion } : item;
+    });
+
+    // DB'de olup built-in'de olmayan itemleri de ekle
+    dbItems.forEach(dbItem => {
+      if (!builtInItems.find(bi => bi.id === dbItem.id)) {
+        allItems.push(dbItem);
+      }
+    });
 
     filterItems();
   } catch (e) {

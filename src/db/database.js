@@ -314,6 +314,16 @@ async function initDatabase() {
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'game_items' AND column_name = 'hp') THEN
           ALTER TABLE game_items ADD COLUMN hp INTEGER DEFAULT 0;
         END IF;
+        -- Per-channel support
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'game_items' AND column_name = 'channel_id') THEN
+          ALTER TABLE game_items ADD COLUMN channel_id TEXT DEFAULT 'global';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'game_monsters' AND column_name = 'channel_id') THEN
+          ALTER TABLE game_monsters ADD COLUMN channel_id TEXT DEFAULT 'global';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'game_quests' AND column_name = 'channel_id') THEN
+          ALTER TABLE game_quests ADD COLUMN channel_id TEXT DEFAULT 'global';
+        END IF;
       END $$;
     `);
         console.log('✅ PostgreSQL veritabanı başlatıldı');
