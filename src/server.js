@@ -486,17 +486,30 @@ app.delete('/api/admin/channel/:id/pool/:name', async (req, res) => {
 
 // ========== GAME TOGGLE ==========
 app.get('/api/admin/channel/:id/game-status', async (req, res) => {
+    const channelId = req.params.id;
+    console.log(`[API] GET game-status for channel: ${channelId}`);
     try {
-        const enabled = await db.getGameEnabled(req.params.id);
-        res.json({ game_enabled: enabled });
-    } catch (e) { res.json({ game_enabled: true }); }
+        const enabled = await db.getGameEnabled(channelId);
+        console.log(`[API] game-status result: channel=${channelId}, enabled=${enabled}`);
+        res.json({ game_enabled: enabled, channel_id: channelId });
+    } catch (e) {
+        console.error(`[API] game-status error:`, e);
+        res.json({ game_enabled: true, error: e.message });
+    }
 });
 
 app.post('/api/admin/channel/:id/game-toggle', async (req, res) => {
+    const channelId = req.params.id;
+    const enabled = req.body.enabled;
+    console.log(`[API] POST game-toggle: channel=${channelId}, enabled=${enabled}`);
     try {
-        await db.setGameEnabled(req.params.id, req.body.enabled);
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+        const success = await db.setGameEnabled(channelId, enabled);
+        console.log(`[API] game-toggle result: channel=${channelId}, success=${success}`);
+        res.json({ success, channel_id: channelId, game_enabled: enabled });
+    } catch (e) {
+        console.error(`[API] game-toggle error:`, e);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // ========== SUGGESTIONS API ==========

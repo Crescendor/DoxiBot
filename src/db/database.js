@@ -606,11 +606,44 @@ export const db = {
 
     // ========== GAME TOGGLE ==========
     async getGameEnabled(channelId) {
-        const row = await queryOne('SELECT game_enabled FROM channels WHERE channel_id = $1', [channelId]);
-        return row?.game_enabled !== 0;
+        // Ensure channelId is treated as a string for BIGINT comparison
+        const cid = String(channelId);
+        console.log(`[DB] getGameEnabled called for channel: ${cid}`);
+
+        const row = await queryOne('SELECT game_enabled FROM channels WHERE channel_id = $1::BIGINT', [cid]);
+        console.log(`[DB] getGameEnabled result:`, row);
+
+        // If no row or game_enabled is NULL, default to true (enabled)
+        if (!row) {
+            console.log(`[DB] No channel found for ID ${cid}, returning default true`);
+            return true;
+        }
+
+        // game_enabled is stored as INTEGER: 1 = enabled, 0 = disabled
+        const enabled = row.game_enabled === 1 || row.game_enabled === true;
+        console.log(`[DB] Channel ${cid} game_enabled = ${enabled}`);
+        return enabled;
     },
+
     async setGameEnabled(channelId, enabled) {
-        await pool.query('UPDATE channels SET game_enabled = $1 WHERE channel_id = $2', [enabled ? 1 : 0, channelId]);
+        // Ensure channelId is treated as a string for BIGINT comparison
+        const cid = String(channelId);
+        const value = enabled ? 1 : 0;
+        console.log(`[DB] setGameEnabled called: channel=${cid}, enabled=${enabled}, value=${value}`);
+
+        // Use RETURNING to verify the update actually happened
+        const result = await pool.query(
+            'UPDATE channels SET game_enabled = $1 WHERE channel_id = $2::BIGINT RETURNING channel_id, game_enabled',
+            [value, cid]
+        );
+
+        if (result.rowCount === 0) {
+            console.log(`[DB] WARNING: No rows updated for channel ${cid}! Check if channel exists.`);
+        } else {
+            console.log(`[DB] Successfully updated ${result.rowCount} row(s). New value:`, result.rows[0]);
+        }
+
+        return result.rowCount > 0;
     },
 
     // ========== SUGGESTIONS ==========
