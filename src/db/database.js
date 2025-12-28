@@ -430,32 +430,37 @@ export const db = {
     // ========== COMMANDS ==========
     async getChannelCommands(channelId) {
         const result = await pool.query(
-            'SELECT command, description, enabled, response FROM channel_commands WHERE channel_id = $1 ORDER BY command',
-            [channelId]
+            'SELECT command, description, enabled, response FROM channel_commands WHERE channel_id = $1::BIGINT ORDER BY command',
+            [String(channelId)]
         );
         return result.rows;
     },
 
     async toggleCommand(channelId, command, enabled) {
         await pool.query(
-            'UPDATE channel_commands SET enabled = $1 WHERE channel_id = $2 AND command = $3',
-            [enabled ? 1 : 0, channelId, command]
+            'UPDATE channel_commands SET enabled = $1 WHERE channel_id = $2::BIGINT AND command = $3',
+            [enabled ? 1 : 0, String(channelId), command]
         );
     },
 
     async updateCommandResponse(channelId, originalCommand, response, newCommand = null) {
+        const cid = String(channelId);
+        console.log(`[DB] updateCommandResponse: channel=${cid}, original=${originalCommand}, new=${newCommand}, response length=${response?.length}`);
+
         if (newCommand && newCommand !== originalCommand) {
             // Update both command name and response
-            await pool.query(
-                'UPDATE channel_commands SET command = $1, response = $2 WHERE channel_id = $3 AND command = $4',
-                [newCommand, response, channelId, originalCommand]
+            const result = await pool.query(
+                'UPDATE channel_commands SET command = $1, response = $2 WHERE channel_id = $3::BIGINT AND command = $4',
+                [newCommand, response, cid, originalCommand]
             );
+            console.log(`[DB] updateCommandResponse rows affected: ${result.rowCount}`);
         } else {
             // Update only response
-            await pool.query(
-                'UPDATE channel_commands SET response = $1 WHERE channel_id = $2 AND command = $3',
-                [response, channelId, originalCommand]
+            const result = await pool.query(
+                'UPDATE channel_commands SET response = $1 WHERE channel_id = $2::BIGINT AND command = $3',
+                [response, cid, originalCommand]
             );
+            console.log(`[DB] updateCommandResponse rows affected: ${result.rowCount}`);
         }
     },
 
