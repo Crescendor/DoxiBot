@@ -153,3 +153,40 @@ export async function processCustomCommand(channelId, command, message) {
         message_id: message.message_id
     };
 }
+
+// Process !öneri command
+export async function processSuggestion(channelId, message) {
+    const content = message.content;
+
+    // Check if it's !öneri command
+    if (!content.toLowerCase().startsWith('!öneri ') && !content.toLowerCase().startsWith('!oneri ')) {
+        return null;
+    }
+
+    // Extract suggestion text
+    const suggestionText = content.slice(content.indexOf(' ') + 1).trim();
+
+    if (!suggestionText || suggestionText.length < 5) {
+        return {
+            response: '❌ Öneri en az 5 karakter olmalı! Örnek: !öneri Yayın saatlerini değiştir',
+            reply_to_user: true
+        };
+    }
+
+    if (suggestionText.length > 500) {
+        return {
+            response: '❌ Öneri en fazla 500 karakter olabilir!',
+            reply_to_user: true
+        };
+    }
+
+    const sender = message.sender;
+
+    // Save suggestion
+    await db.addSuggestion(channelId, sender?.user_id || 0, sender?.username || 'Anonim', suggestionText);
+
+    return {
+        response: `✅ Öneri kaydedildi! Teşekkürler @${sender?.username || 'Kullanıcı'}`,
+        reply_to_user: true
+    };
+}

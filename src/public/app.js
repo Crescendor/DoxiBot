@@ -58,6 +58,7 @@ function navigateTo(page) {
   if (page === 'settings') loadSettings();
   if (page === 'customcmds') loadCustomCommands();
   if (page === 'pools') loadPools();
+  if (page === 'suggestions') loadSuggestions();
 }
 
 async function loadStatus() {
@@ -1142,4 +1143,82 @@ async function toggleGame(enabled) {
 
   document.getElementById('game-status-text').textContent = enabled ? 'Açık' : 'Kapalı';
   showNotification(enabled ? '🎮 RPG Oyun açıldı!' : '⏸️ RPG Oyun kapatıldı', 'success');
+}
+
+// ========== SUGGESTIONS ==========
+let suggestionsPage = 1;
+
+async function loadSuggestions(page = 1) {
+  suggestionsPage = page;
+
+  if (!currentChannelId) {
+    document.getElementById('suggestions-list').innerHTML = '<div class="empty-state">Önce kanal seçin</div>';
+    document.getElementById('suggestions-pagination').innerHTML = '';
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/admin/channel/${currentChannelId}/suggestions?page=${page}&limit=10`);
+    const data = await res.json();
+
+    const statusLabels = {
+      pending: '⏳ Beklemede',
+      reviewed: '👀 İncelendi',
+      approved: '✅ Onaylandı',
+      rejected: '❌ Reddedildi'
+    };
+
+    document.getElementById('suggestions-list').innerHTML = data.suggestions.length > 0 ? data.suggestions.map(s => `
+      <div class="suggestion-item status-${s.status}">
+        <div class="suggestion-header">
+          <span class="suggestion-user">@${esc(s.username)}</span>
+          <span class="suggestion-date">${new Date(s.created_at * 1000).toLocaleString('tr-TR')}</span>
+        </div>
+        <div class="suggestion-content">${esc(s.content)}</div>
+        <div class="suggestion-actions">
+          <span class="suggestion-status">${statusLabels[s.status] || s.status}</span>
+          <select onchange="updateSuggestionStatus(${s.id}, this.value)">
+            <option value="pending" ${s.status === 'pending' ? 'selected' : ''}>⏳ Beklemede</option>
+            <option value="reviewed" ${s.status === 'reviewed' ? 'selected' : ''}>👀 İncelendi</option>
+            <option value="approved" ${s.status === 'approved' ? 'selected' : ''}>✅ Onaylandı</option>
+            <option value="rejected" ${s.status === 'rejected' ? 'selected' : ''}>❌ Reddedildi</option>
+          </select>
+          <button class="btn btn-small btn-danger" onclick="deleteSuggestion(${s.id})">🗑️</button>
+        </div>
+      </div>
+    `).join('') : '<div class="empty-state">Henüz öneri yok. Kullanıcılar !öneri komutu ile öneri gönderebilir.</div>';
+
+    // Pagination
+    let paginationHtml = '';
+    if (data.totalPages > 1) {
+      paginationHtml = '<div class="pagination-controls">';
+      if (page > 1) {
+        paginationHtml += `<button class="btn btn-small" onclick="loadSuggestions(${page - 1})">◀ Önceki</button>`;
+      }
+      paginationHtml += `<span class="page-info">Sayfa ${page} / ${data.totalPages} (${data.total} öneri)</span>`;
+      if (page < data.totalPages) {
+        paginationHtml += `<button class="btn btn-small" onclick="loadSuggestions(${page + 1})">Sonraki ▶</button>`;
+      }
+      paginationHtml += '</div>';
+    }
+    document.getElementById('suggestions-pagination').innerHTML = paginationHtml;
+  } catch (e) {
+    document.getElementById('suggestions-list').innerHTML = '<div class="empty-state">Yüklenemedi</div>';
+  }
+}
+
+async function updateSuggestionStatus(suggestionId, status) {
+  await fetch(`/api/admin/channel/${currentChannelId}/suggestion/${suggestionId}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status })
+  });
+  showNotification('✅ Durum güncellendi', 'success');
+  loadSuggestions(suggestionsPage);
+}
+
+async function deleteSuggestion(suggestionId) {
+  if (!confirm('Bu öneriyi silmek istediğinize emin misiniz?')) return;
+  await fetch(`/api/admin/channel/${currentChannelId}/suggestion/${suggestionId}`, { method: 'DELETE' });
+  showNotification('✅ Silindi', 'success');
+  loadSuggestions(suggestionsPage);
 }

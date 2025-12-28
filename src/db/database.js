@@ -203,6 +203,17 @@ async function initDatabase() {
         UNIQUE(channel_id, pool_name)
       );
 
+      -- Suggestions (!öneri command)
+      CREATE TABLE IF NOT EXISTS suggestions (
+        id SERIAL PRIMARY KEY,
+        channel_id BIGINT NOT NULL,
+        user_id BIGINT NOT NULL,
+        username TEXT NOT NULL,
+        content TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())
+      );
+
       -- Add game_enabled column to channels if not exists
       DO $$ 
       BEGIN 
@@ -569,5 +580,26 @@ export const db = {
     },
     async setGameEnabled(channelId, enabled) {
         await pool.query('UPDATE channels SET game_enabled = $1 WHERE channel_id = $2', [enabled ? 1 : 0, channelId]);
+    },
+
+    // ========== SUGGESTIONS ==========
+    async addSuggestion(channelId, userId, username, content) {
+        await pool.query('INSERT INTO suggestions (channel_id, user_id, username, content) VALUES ($1, $2, $3, $4)',
+            [channelId, userId, username, content]);
+    },
+    async getSuggestions(channelId, page = 1, limit = 10) {
+        const offset = (page - 1) * limit;
+        return query('SELECT * FROM suggestions WHERE channel_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3',
+            [channelId, limit, offset]);
+    },
+    async getSuggestionCount(channelId) {
+        const row = await queryOne('SELECT COUNT(*) as count FROM suggestions WHERE channel_id = $1', [channelId]);
+        return parseInt(row?.count || 0);
+    },
+    async updateSuggestionStatus(suggestionId, status) {
+        await pool.query('UPDATE suggestions SET status = $1 WHERE id = $2', [status, suggestionId]);
+    },
+    async deleteSuggestion(suggestionId) {
+        await pool.query('DELETE FROM suggestions WHERE id = $1', [suggestionId]);
     }
 };

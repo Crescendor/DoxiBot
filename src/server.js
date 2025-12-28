@@ -6,7 +6,7 @@ import { db } from './db/database.js';
 import { kickApi } from './api/kick.js';
 import { getAuthorizationUrl, exchangeCodeForTokens } from './auth/oauth.js';
 import { processCommand } from './game/engine.js';
-import { processCustomCommand } from './commands/customCommands.js';
+import { processCustomCommand, processSuggestion } from './commands/customCommands.js';
 import { getAllMonsters } from './data/monsters.js';
 import { getAllItems, rarityColors } from './data/items.js';
 import { getAllQuests } from './data/quests.js';
@@ -124,6 +124,17 @@ app.post('/webhook', async (req, res) => {
             if (message.content?.startsWith('!')) {
                 const cmdParts = message.content.slice(1).split(' ');
                 const cmdName = cmdParts[0].toLowerCase();
+
+                // 0. Check !öneri command first (always available)
+                if (cmdName === 'öneri' || cmdName === 'oneri') {
+                    const suggestionResult = await processSuggestion(channelId, message);
+                    if (suggestionResult) {
+                        console.log(`[Bot] Suggestion response: ${suggestionResult.response}`);
+                        const replyTo = suggestionResult.reply_to_user ? message.message_id : null;
+                        await kickApi.sendMessageToChannel(channelId, channel.access_token, suggestionResult.response, replyTo);
+                        return res.status(200).json({ received: true });
+                    }
+                }
 
                 // 1. Check custom commands first
                 const customResult = await processCustomCommand(channelId, cmdName, message);
@@ -386,6 +397,35 @@ app.get('/api/admin/channel/:id/game-status', async (req, res) => {
 app.post('/api/admin/channel/:id/game-toggle', async (req, res) => {
     try {
         await db.setGameEnabled(parseInt(req.params.id), req.body.enabled);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ========== SUGGESTIONS API ==========
+app.get('/api/admin/channel/:id/suggestions', async (req, res) => {
+    try {
+        const channelId = parseInt(req.params.id);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+
+        const suggestions = await db.getSuggestions(channelId, page, limit);
+        const total = await db.getSuggestionCount(channelId);
+        const totalPages = Math.ceil(total / limit);
+
+        res.json({ suggestions, total, page, totalPages });
+    } catch (e) { res.json({ suggestions: [], total: 0, page: 1, totalPages: 0 }); }
+});
+
+app.put('/api/admin/channel/:id/suggestion/:suggestionId', async (req, res) => {
+    try {
+        await db.updateSuggestionStatus(parseInt(req.params.suggestionId), req.body.status);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/admin/channel/:id/suggestion/:suggestionId', async (req, res) => {
+    try {
+        await db.deleteSuggestion(parseInt(req.params.suggestionId));
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
