@@ -524,91 +524,94 @@ app.post('/api/admin/channel/:id/game-toggle', async (req, res) => {
     }
 });
 
-// ========== GAME DATA API ==========
-app.get('/api/admin/game/items', async (req, res) => {
+// ========== GAME DATA API (Per-Channel) ==========
+// Items
+app.get('/api/admin/channel/:channelId/game/items', async (req, res) => {
     try {
-        const items = await db.getAllGameItems();
+        const items = await db.getAllGameItems(req.params.channelId);
         res.json(items);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put('/api/admin/game/item/:id', async (req, res) => {
+app.put('/api/admin/channel/:channelId/game/item/:id', async (req, res) => {
     try {
-        console.log('[API] PUT game/item:', req.params.id, JSON.stringify(req.body));
-        await db.saveGameItem({ ...req.body, id: req.params.id });
+        console.log('[API] PUT game/item:', req.params.channelId, req.params.id);
+        await db.saveGameItem({ ...req.body, id: req.params.id }, req.params.channelId);
         res.json({ success: true });
     } catch (e) {
-        console.error('[API] saveGameItem error:', e.message, e.stack);
-        res.status(500).json({ error: e.message, stack: e.stack, detail: 'saveGameItem failed' });
+        console.error('[API] saveGameItem error:', e.message);
+        res.status(500).json({ error: e.message });
     }
 });
 
-app.post('/api/admin/game/item', async (req, res) => {
+app.post('/api/admin/channel/:channelId/game/item', async (req, res) => {
     try {
-        await db.saveGameItem(req.body);
+        await db.saveGameItem(req.body, req.params.channelId);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/admin/game/item/:id', async (req, res) => {
+app.delete('/api/admin/channel/:channelId/game/item/:id', async (req, res) => {
     try {
-        await db.deleteGameItem(req.params.id);
+        await db.deleteGameItem(req.params.id, req.params.channelId);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/admin/game/monsters', async (req, res) => {
+// Monsters
+app.get('/api/admin/channel/:channelId/game/monsters', async (req, res) => {
     try {
-        const monsters = await db.getAllGameMonsters();
+        const monsters = await db.getAllGameMonsters(req.params.channelId);
         res.json(monsters);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put('/api/admin/game/monster/:id', async (req, res) => {
+app.put('/api/admin/channel/:channelId/game/monster/:id', async (req, res) => {
     try {
-        await db.saveGameMonster({ ...req.body, id: req.params.id });
+        await db.saveGameMonster({ ...req.body, id: req.params.id }, req.params.channelId);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/admin/game/monster', async (req, res) => {
+app.post('/api/admin/channel/:channelId/game/monster', async (req, res) => {
     try {
-        await db.saveGameMonster(req.body);
+        await db.saveGameMonster(req.body, req.params.channelId);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/admin/game/monster/:id', async (req, res) => {
+app.delete('/api/admin/channel/:channelId/game/monster/:id', async (req, res) => {
     try {
-        await db.deleteGameMonster(req.params.id);
+        await db.deleteGameMonster(req.params.id, req.params.channelId);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/admin/game/quests', async (req, res) => {
+// Quests
+app.get('/api/admin/channel/:channelId/game/quests', async (req, res) => {
     try {
-        const quests = await db.getAllGameQuests();
+        const quests = await db.getAllGameQuests(req.params.channelId);
         res.json(quests);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put('/api/admin/game/quest/:id', async (req, res) => {
+app.put('/api/admin/channel/:channelId/game/quest/:id', async (req, res) => {
     try {
-        await db.saveGameQuest({ ...req.body, id: req.params.id });
+        await db.saveGameQuest({ ...req.body, id: req.params.id }, req.params.channelId);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/admin/game/quest', async (req, res) => {
+app.post('/api/admin/channel/:channelId/game/quest', async (req, res) => {
     try {
-        await db.saveGameQuest(req.body);
+        await db.saveGameQuest(req.body, req.params.channelId);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/admin/game/quest/:id', async (req, res) => {
+app.delete('/api/admin/channel/:channelId/game/quest/:id', async (req, res) => {
     try {
-        await db.deleteGameQuest(req.params.id);
+        await db.deleteGameQuest(req.params.id, req.params.channelId);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });

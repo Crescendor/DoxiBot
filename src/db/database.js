@@ -763,64 +763,74 @@ export const db = {
         return row?.password_hash || null;
     },
 
-    // ========== GAME ITEMS ==========
-    async getAllGameItems() {
-        const result = await pool.query('SELECT * FROM game_items ORDER BY name');
+    // ========== GAME ITEMS (Per-Channel) ==========
+    async getAllGameItems(channelId) {
+        const cid = String(channelId || 'global');
+        const result = await pool.query('SELECT * FROM game_items WHERE channel_id = $1 ORDER BY name', [cid]);
         return result.rows;
     },
-    async saveGameItem(item) {
+    async saveGameItem(item, channelId) {
+        const cid = String(channelId || 'global');
+        // Use composite key: id + channel_id
         await pool.query(
-            `INSERT INTO game_items (id, name, emoji, type, rarity, description, price, gem_price, shop_item, premium_shop, attack, defense, hp)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-             ON CONFLICT (id) DO UPDATE SET
+            `INSERT INTO game_items (id, name, emoji, type, rarity, description, price, gem_price, shop_item, premium_shop, attack, defense, hp, channel_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+             ON CONFLICT (id, channel_id) DO UPDATE SET
              name = $2, emoji = $3, type = $4, rarity = $5, description = $6,
              price = $7, gem_price = $8, shop_item = $9, premium_shop = $10,
              attack = $11, defense = $12, hp = $13`,
             [item.id, item.name, item.emoji || '📦', item.type || 'material', item.rarity || 'common',
             item.description || '', item.price || 0, item.gem_price || 0,
             item.shop_item || false, item.premium_shop || false,
-            item.attack || 0, item.defense || 0, item.hp || 0]
+            item.attack || 0, item.defense || 0, item.hp || 0, cid]
         );
     },
-    async deleteGameItem(id) {
-        await pool.query('DELETE FROM game_items WHERE id = $1', [id]);
+    async deleteGameItem(id, channelId) {
+        const cid = String(channelId || 'global');
+        await pool.query('DELETE FROM game_items WHERE id = $1 AND channel_id = $2', [id, cid]);
     },
 
-    // ========== GAME MONSTERS ==========
-    async getAllGameMonsters() {
-        const result = await pool.query('SELECT * FROM game_monsters ORDER BY min_level, name');
+    // ========== GAME MONSTERS (Per-Channel) ==========
+    async getAllGameMonsters(channelId) {
+        const cid = String(channelId || 'global');
+        const result = await pool.query('SELECT * FROM game_monsters WHERE channel_id = $1 ORDER BY min_level, name', [cid]);
         return result.rows;
     },
-    async saveGameMonster(m) {
+    async saveGameMonster(m, channelId) {
+        const cid = String(channelId || 'global');
         await pool.query(
-            `INSERT INTO game_monsters (id, name, emoji, hp, atk, def, min_level, exp_reward, gold_reward)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-             ON CONFLICT (id) DO UPDATE SET
+            `INSERT INTO game_monsters (id, name, emoji, hp, atk, def, min_level, exp_reward, gold_reward, channel_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+             ON CONFLICT (id, channel_id) DO UPDATE SET
              name = $2, emoji = $3, hp = $4, atk = $5, def = $6,
              min_level = $7, exp_reward = $8, gold_reward = $9`,
             [m.id, m.name, m.emoji || '👹', m.hp || 100, m.atk || 10, m.def || 5,
-            m.min_level || 1, m.exp_reward || 50, m.gold_reward || 100]
+            m.min_level || 1, m.exp_reward || 50, m.gold_reward || 100, cid]
         );
     },
-    async deleteGameMonster(id) {
-        await pool.query('DELETE FROM game_monsters WHERE id = $1', [id]);
+    async deleteGameMonster(id, channelId) {
+        const cid = String(channelId || 'global');
+        await pool.query('DELETE FROM game_monsters WHERE id = $1 AND channel_id = $2', [id, cid]);
     },
 
-    // ========== GAME QUESTS ==========
-    async getAllGameQuests() {
-        const result = await pool.query('SELECT * FROM game_quests ORDER BY min_level, name');
+    // ========== GAME QUESTS (Per-Channel) ==========
+    async getAllGameQuests(channelId) {
+        const cid = String(channelId || 'global');
+        const result = await pool.query('SELECT * FROM game_quests WHERE channel_id = $1 ORDER BY min_level, name', [cid]);
         return result.rows;
     },
-    async saveGameQuest(q) {
+    async saveGameQuest(q, channelId) {
+        const cid = String(channelId || 'global');
         await pool.query(
-            `INSERT INTO game_quests (id, name, description, gold_reward, exp_reward, min_level)
-             VALUES ($1, $2, $3, $4, $5, $6)
-             ON CONFLICT (id) DO UPDATE SET
+            `INSERT INTO game_quests (id, name, description, gold_reward, exp_reward, min_level, channel_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (id, channel_id) DO UPDATE SET
              name = $2, description = $3, gold_reward = $4, exp_reward = $5, min_level = $6`,
-            [q.id, q.name, q.description || '', q.gold_reward || 100, q.exp_reward || 50, q.min_level || 1]
+            [q.id, q.name, q.description || '', q.gold_reward || 100, q.exp_reward || 50, q.min_level || 1, cid]
         );
     },
-    async deleteGameQuest(id) {
-        await pool.query('DELETE FROM game_quests WHERE id = $1', [id]);
+    async deleteGameQuest(id, channelId) {
+        const cid = String(channelId || 'global');
+        await pool.query('DELETE FROM game_quests WHERE id = $1 AND channel_id = $2', [id, cid]);
     }
 };

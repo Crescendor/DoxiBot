@@ -586,8 +586,8 @@ async function loadItems() {
     const data = await res.json();
     let builtInItems = data.builtIn || [];
 
-    // Veritabanındaki özelleştirmeleri çek
-    res = await fetch('/api/admin/game/items');
+    // Veritabanındaki kanal özelleştirmelerini çek
+    res = await fetch('/api/admin/channel/' + currentChannelId + '/game/items');
     let dbItems = await res.json();
 
     // API hata döndürdüyse boş array yap
@@ -703,7 +703,7 @@ async function saveItem(itemId) {
     premium_shop: document.getElementById('edit-item-pshop').checked
   };
 
-  const res = await fetch('/api/admin/game/item/' + itemId, {
+  const res = await fetch('/api/admin/channel/' + currentChannelId + '/game/item/' + itemId, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(itemData)
@@ -759,7 +759,7 @@ async function addNewItem() {
     rarity: 'common'
   };
 
-  const res = await fetch('/api/admin/game/item', {
+  const res = await fetch('/api/admin/channel/' + currentChannelId + '/game/item', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(itemData)
