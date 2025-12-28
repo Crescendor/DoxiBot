@@ -325,6 +325,27 @@ async function initDatabase() {
           ALTER TABLE game_quests ADD COLUMN channel_id TEXT DEFAULT 'global';
         END IF;
       END $$;
+
+      -- Create composite unique constraints for per-channel data
+      -- First drop old primary key and recreate with composite
+      DO $$
+      BEGIN
+        -- game_items: drop PK if exists, create unique on (id, channel_id)
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'game_items_channel_unique') THEN
+          ALTER TABLE game_items DROP CONSTRAINT IF EXISTS game_items_pkey;
+          ALTER TABLE game_items ADD CONSTRAINT game_items_channel_unique UNIQUE (id, channel_id);
+        END IF;
+        -- game_monsters
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'game_monsters_channel_unique') THEN
+          ALTER TABLE game_monsters DROP CONSTRAINT IF EXISTS game_monsters_pkey;
+          ALTER TABLE game_monsters ADD CONSTRAINT game_monsters_channel_unique UNIQUE (id, channel_id);
+        END IF;
+        -- game_quests
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'game_quests_channel_unique') THEN
+          ALTER TABLE game_quests DROP CONSTRAINT IF EXISTS game_quests_pkey;
+          ALTER TABLE game_quests ADD CONSTRAINT game_quests_channel_unique UNIQUE (id, channel_id);
+        END IF;
+      END $$;
     `);
         console.log('✅ PostgreSQL veritabanı başlatıldı');
     } finally {
