@@ -1240,6 +1240,13 @@ async function loadGameStatus() {
 
     document.getElementById('game-enabled-toggle').checked = data.game_enabled;
     document.getElementById('game-status-text').textContent = data.game_enabled ? 'Açık' : 'Kapalı';
+
+    // Update channel name in toggle text
+    const ch = channels.find(c => c.channel_id === currentChannelId);
+    if (ch) {
+      const nameSpan = document.getElementById('current-channel-name-toggle');
+      if (nameSpan) nameSpan.textContent = ch.owner_username || ch.username || 'Bilinmeyen';
+    }
   } catch (e) {
     console.error('Game status error:', e);
   }

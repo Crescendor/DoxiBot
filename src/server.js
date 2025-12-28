@@ -148,6 +148,8 @@ app.post('/webhook', async (req, res) => {
 
                 // 2. Check if game is enabled for game commands
                 const gameEnabled = await db.getGameEnabled(channelId);
+                console.log(`[Bot] Game check for channel ${channelId}. Status: ${gameEnabled ? 'ENABLED' : 'DISABLED'}`);
+
                 if (gameEnabled) {
                     const response = await processCommand(channelId, message);
                     if (response) {
