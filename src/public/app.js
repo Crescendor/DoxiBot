@@ -581,12 +581,22 @@ let allQuests = [];
 
 async function loadItems() {
   try {
-    const res = await fetch('/api/admin/items');
-    const data = await res.json();
-    allItems = data.builtIn || [];
+    // Önce veritabanından çek
+    let res = await fetch('/api/admin/game/items');
+    let dbItems = await res.json();
+
+    // Eğer veritabanı boşsa, built-in'leri kullan
+    if (!dbItems || dbItems.length === 0 || dbItems.error) {
+      res = await fetch('/api/admin/items');
+      const data = await res.json();
+      allItems = data.builtIn || [];
+    } else {
+      allItems = dbItems;
+    }
 
     filterItems();
   } catch (e) {
+    console.error('loadItems error:', e);
     document.getElementById('items-list').innerHTML = '<div class="empty-state">Yüklenemedi</div>';
   }
 }
