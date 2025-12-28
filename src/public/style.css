@@ -1489,6 +1489,12 @@ select.input {
   color: var(--text-muted);
 }
 
+.cmd-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
 /* Pools */
 .pool-item {
   background: var(--bg-card);

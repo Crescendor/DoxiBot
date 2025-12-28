@@ -927,6 +927,8 @@ async function saveSettings() {
 }
 
 // ========== CUSTOM COMMANDS ==========
+let allCustomCommands = [];
+
 async function loadCustomCommands() {
   if (!currentChannelId) {
     document.getElementById('custom-commands-list').innerHTML = '<div class="empty-state">Önce kanal seçin</div>';
@@ -935,29 +937,26 @@ async function loadCustomCommands() {
 
   try {
     const res = await fetch(`/api/admin/channel/${currentChannelId}/custom-commands`);
-    const commands = await res.json();
+    allCustomCommands = await res.json();
 
-    document.getElementById('custom-commands-list').innerHTML = commands.length > 0 ? commands.map(cmd => `
+    document.getElementById('custom-commands-list').innerHTML = allCustomCommands.length > 0 ? allCustomCommands.map(cmd => `
       <div class="custom-cmd-item ${cmd.enabled ? '' : 'disabled'}">
         <div class="cmd-header">
           <span class="cmd-name">!${esc(cmd.command)}</span>
           <div class="cmd-actions">
-            <span class="cmd-uses">${cmd.use_count || 0} kullanım</span>
-            <label class="toggle-switch">
-              <input type="checkbox" ${cmd.enabled ? 'checked' : ''} onchange="toggleCustomCmd('${esc(cmd.command)}', this.checked)">
-              <span class="toggle-slider"></span>
-            </label>
-            <button class="btn btn-small" onclick="editCustomCmd('${esc(cmd.command)}')">✏️</button>
+            <span class="cmd-uses">${cmd.use_count || 0}x</span>
+            <button class="btn btn-small" onclick="editCustomCmd('${esc(cmd.command)}')">✏️ Düzenle</button>
             <button class="btn btn-small btn-danger" onclick="deleteCustomCmd('${esc(cmd.command)}')">🗑️</button>
           </div>
         </div>
-        <div class="cmd-response">${esc(cmd.response)}</div>
-        ${cmd.sub_response ? `<div class="cmd-sub-response">👑 Abone: ${esc(cmd.sub_response)}</div>` : ''}
-        <div class="cmd-options">
-          ${cmd.reply_to_user ? '↩️ Cevap ver' : ''} 
+        <div class="cmd-response">${esc(cmd.response.substring(0, 100))}${cmd.response.length > 100 ? '...' : ''}</div>
+        <div class="cmd-meta">
+          ${cmd.enabled ? '✅ Aktif' : '❌ Kapalı'}
+          ${cmd.sub_response ? ' | 👑 Abone cevabı var' : ''}
+          ${cmd.reply_to_user ? ' | ↩️ Cevap' : ''}
         </div>
       </div>
-    `).join('') : '<div class="empty-state">Henüz özel komut yok</div>';
+    `).join('') : '<div class="empty-state">Henüz özel komut yok. + Yeni Komut ile ekleyin!</div>';
   } catch (e) {
     document.getElementById('custom-commands-list').innerHTML = '<div class="empty-state">Yüklenemedi</div>';
   }
@@ -966,27 +965,29 @@ async function loadCustomCommands() {
 function openAddCustomCmdModal() {
   openModal('➕ Yeni Özel Komut', `
     <div class="form-group">
-      <label>Komut (! olmadan)</label>
-      <input type="text" id="new-cmd-name" class="input" placeholder="selam">
+      <label>Komut</label>
+      <input type="text" id="new-cmd-name" class="input" placeholder="!selam" value="!">
     </div>
     <div class="form-group">
       <label>Cevap</label>
-      <textarea id="new-cmd-response" class="input" rows="3" placeholder="Merhaba {bahset}! How are you?"></textarea>
+      <textarea id="new-cmd-response" class="input" rows="3" placeholder="Merhaba {bahset}!"></textarea>
     </div>
     <div class="form-group">
-      <label>Abone/Mod/Yayıncı Özel Cevabı (opsiyonel)</label>
-      <textarea id="new-cmd-sub-response" class="input" rows="2" placeholder="VIP cevap"></textarea>
+      <label>👑 Abone/Mod Özel Cevabı (boş bırakılabilir)</label>
+      <textarea id="new-cmd-sub-response" class="input" rows="2" placeholder=""></textarea>
     </div>
-    <div class="form-row">
-      <label class="checkbox"><input type="checkbox" id="new-cmd-reply" checked> Kullanıcıya cevap ver</label>
-      <label class="checkbox"><input type="checkbox" id="new-cmd-enabled" checked> Aktif</label>
+    <div class="form-row" style="margin:12px 0">
+      <label class="checkbox"><input type="checkbox" id="new-cmd-reply" checked> ↩️ Kullanıcıya cevap ver</label>
+      <label class="checkbox"><input type="checkbox" id="new-cmd-enabled" checked> ✅ Aktif</label>
     </div>
     <button class="btn btn-primary" onclick="saveNewCustomCmd()">💾 Kaydet</button>
   `);
 }
 
 async function saveNewCustomCmd() {
-  const command = document.getElementById('new-cmd-name').value.trim().toLowerCase();
+  let command = document.getElementById('new-cmd-name').value.trim().toLowerCase();
+  if (command.startsWith('!')) command = command.slice(1);
+
   const response = document.getElementById('new-cmd-response').value;
   const sub_response = document.getElementById('new-cmd-sub-response').value || null;
   const reply_to_user = document.getElementById('new-cmd-reply').checked;
@@ -1005,23 +1006,50 @@ async function saveNewCustomCmd() {
   closeModal(); loadCustomCommands(); showNotification('✅ Komut eklendi!', 'success');
 }
 
-async function toggleCustomCmd(command, enabled) {
+function editCustomCmd(command) {
+  const cmd = allCustomCommands.find(c => c.command === command);
+  if (!cmd) return;
+
+  openModal('✏️ Komutu Düzenle: !' + command, `
+    <div class="form-group">
+      <label>Cevap</label>
+      <textarea id="edit-cmd-response" class="input" rows="3">${esc(cmd.response)}</textarea>
+    </div>
+    <div class="form-group">
+      <label>👑 Abone/Mod Özel Cevabı</label>
+      <textarea id="edit-cmd-sub-response" class="input" rows="2">${esc(cmd.sub_response || '')}</textarea>
+    </div>
+    <div class="form-row" style="margin:12px 0">
+      <label class="checkbox"><input type="checkbox" id="edit-cmd-reply" ${cmd.reply_to_user ? 'checked' : ''}> ↩️ Kullanıcıya cevap ver</label>
+      <label class="checkbox"><input type="checkbox" id="edit-cmd-enabled" ${cmd.enabled ? 'checked' : ''}> ✅ Aktif</label>
+    </div>
+    <button class="btn btn-primary" onclick="saveEditCustomCmd('${command}')">💾 Kaydet</button>
+  `);
+}
+
+async function saveEditCustomCmd(command) {
+  const response = document.getElementById('edit-cmd-response').value;
+  const sub_response = document.getElementById('edit-cmd-sub-response').value || null;
+  const reply_to_user = document.getElementById('edit-cmd-reply').checked;
+  const enabled = document.getElementById('edit-cmd-enabled').checked;
+
+  if (!response) {
+    showNotification('Cevap gerekli!', 'error');
+    return;
+  }
+
   await fetch(`/api/admin/channel/${currentChannelId}/custom-command`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ command, response: '', enabled })
+    body: JSON.stringify({ command, response, sub_response, reply_to_user, enabled })
   });
-  showNotification(enabled ? '✅ Açıldı' : '❌ Kapatıldı', 'success');
+
+  closeModal(); loadCustomCommands(); showNotification('✅ Kaydedildi!', 'success');
 }
 
 async function deleteCustomCmd(command) {
   if (!confirm(`"!${command}" komutunu silmek istediğinize emin misiniz?`)) return;
   await fetch(`/api/admin/channel/${currentChannelId}/custom-command/${command}`, { method: 'DELETE' });
   loadCustomCommands(); showNotification('✅ Silindi', 'success');
-}
-
-function editCustomCmd(command) {
-  // Re-fetch and open modal with data
-  showNotification('Düzenleme modalı yakında eklenecek', 'info');
 }
 
 // ========== POOLS ==========
