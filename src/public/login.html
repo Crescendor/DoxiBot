@@ -259,7 +259,7 @@
                 if (data.success) {
                     // Store session and redirect to channel dashboard
                     localStorage.setItem('sessionId', data.sessionId);
-                    window.location.href = `/x/${username}`;
+                    window.location.href = `/${username}`;
                 } else {
                     showError(data.error || 'Giriş başarısız!');
                     loginBtn.disabled = false;
@@ -287,7 +287,7 @@
                 const res = await fetch('/api/session');
                 const data = await res.json();
                 if (data.loggedIn && data.username) {
-                    window.location.href = `/x/${data.username}`;
+                    window.location.href = `/${data.username}`;
                 }
             } catch (e) { }
         })();

@@ -11,43 +11,60 @@ let loggedInUsername = null;
 document.addEventListener('DOMContentLoaded', async () => {
   // Detect channel from URL
   const path = window.location.pathname;
-  const slugMatch = path.match(/^\/(x|adminview\/x)\/([^/]+)/);
 
-  if (slugMatch) {
-    currentChannelSlug = slugMatch[2].toLowerCase();
-    const isAdminView = slugMatch[1] === 'adminview/x';
+  // Check for /adminview/slug or /slug format
+  const adminMatch = path.match(/^\/adminview\/([^/]+)/);
+  const channelMatch = path.match(/^\/([^/]+)$/);
 
-    // Verify session
-    const session = await checkSession();
-    if (!session.loggedIn) {
-      window.location.href = '/login';
-      return;
-    }
+  // Skip if it's a known system path
+  const systemPaths = ['login', 'health', 'webhook', 'kick-login', 'api', 'auth'];
 
-    loggedInUsername = session.username;
-    isSuperAdmin = session.isSuperAdmin;
+  let isAdminView = false;
 
-    // If admin view, only super admin can access
-    if (isAdminView && !isSuperAdmin) {
-      window.location.href = `/x/${loggedInUsername}`;
-      return;
-    }
-
-    // Load channel info
-    await loadChannelBySlug(currentChannelSlug);
-
-    // Setup UI visibility based on role
-    setupUIVisibility();
-
-    initNavigation();
-    updateSetupUrls();
-    navigateTo('dashboard');
-    setInterval(() => loadDashboard(), 60000);
+  if (adminMatch) {
+    currentChannelSlug = adminMatch[1].toLowerCase();
+    isAdminView = true;
+  } else if (channelMatch && !systemPaths.includes(channelMatch[1].toLowerCase())) {
+    currentChannelSlug = channelMatch[1].toLowerCase();
   } else if (path === '/' || path === '/index.html') {
-    // Redirect to login
+    window.location.href = '/login';
+    return;
+  } else {
+    return; // Unknown path, let server handle
+  }
+
+  // Verify session
+  const session = await checkSession();
+  if (!session.loggedIn) {
     window.location.href = '/login';
     return;
   }
+
+  loggedInUsername = session.username;
+  isSuperAdmin = session.isSuperAdmin;
+
+  // If admin view, only super admin can access
+  if (isAdminView && !isSuperAdmin) {
+    window.location.href = `/${loggedInUsername}`;
+    return;
+  }
+
+  // If not super admin, can only view own channel
+  if (!isSuperAdmin && currentChannelSlug !== loggedInUsername) {
+    window.location.href = `/${loggedInUsername}`;
+    return;
+  }
+
+  // Load channel info
+  await loadChannelBySlug(currentChannelSlug);
+
+  // Setup UI visibility based on role
+  setupUIVisibility();
+
+  initNavigation();
+  updateSetupUrls();
+  navigateTo('dashboard');
+  setInterval(() => loadDashboard(), 60000);
 });
 
 async function checkSession() {
@@ -111,7 +128,7 @@ function switchChannel() {
   const select = document.getElementById('channel-select');
   const newSlug = select.value;
   if (newSlug && newSlug !== currentChannelSlug) {
-    window.location.href = `/adminview/x/${newSlug}`;
+    window.location.href = `/adminview/${newSlug}`;
   }
 }
 

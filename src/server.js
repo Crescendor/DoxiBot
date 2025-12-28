@@ -107,17 +107,12 @@ app.get('/api/session', (req, res) => {
     }
 });
 
-// Channel dashboard route
-app.get('/x/:slug', (req, res) => {
+// Super admin view route (must be before catch-all)
+app.get('/adminview/:slug', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Super admin view route
-app.get('/adminview/x/:slug', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Redirect root to login
+// Root redirects to login
 app.get('/', (req, res) => {
     res.redirect('/login');
 });
@@ -533,7 +528,15 @@ app.delete('/api/admin/channel/:id/suggestion/:suggestionId', async (req, res) =
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+// Channel dashboard route (catch-all, must be LAST)
+app.get('/:slug', (req, res) => {
+    // Don't catch known paths
+    const slug = req.params.slug.toLowerCase();
+    if (['login', 'health', 'webhook', 'kick-login'].includes(slug)) {
+        return res.status(404).send('Not found');
+    }
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Health check for Railway
 app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
