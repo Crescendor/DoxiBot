@@ -3,6 +3,36 @@ import { config } from '../config.js';
 const KICK_API_BASE = 'https://api.kick.com/public/v1';
 
 export const kickApi = {
+    // Refresh access token using refresh_token
+    async refreshAccessToken(refreshToken) {
+        console.log('[Kick] Refreshing access token...');
+        try {
+            const response = await fetch('https://id.kick.com/oauth/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    grant_type: 'refresh_token',
+                    client_id: config.clientId,
+                    client_secret: config.clientSecret,
+                    refresh_token: refreshToken
+                })
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                console.error(`[Kick] Token refresh failed: ${response.status} - ${text}`);
+                return null;
+            }
+
+            const tokens = await response.json();
+            console.log('[Kick] Token refreshed successfully');
+            return tokens;
+        } catch (e) {
+            console.error('[Kick] Token refresh error:', e.message);
+            return null;
+        }
+    },
+
     // Get current user with provided token
     async getCurrentUserWithToken(accessToken) {
         const response = await fetch(`${KICK_API_BASE}/users`, {
@@ -13,7 +43,8 @@ export const kickApi = {
     },
 
     // Send message to a specific channel using their token
-    async sendMessageToChannel(channelId, accessToken, content, replyTo = null) {
+    // Now accepts db and channelId for auto-refresh
+    async sendMessageToChannel(channelId, accessToken, content, replyTo = null, db = null, refreshToken = null) {
         const body = {
             broadcaster_user_id: parseInt(channelId),
             content,
@@ -23,7 +54,7 @@ export const kickApi = {
 
         console.log(`[Kick] Sending message to channel ${channelId}`);
 
-        const response = await fetch(`${KICK_API_BASE}/chat`, {
+        let response = await fetch(`${KICK_API_BASE}/chat`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
@@ -31,6 +62,28 @@ export const kickApi = {
             },
             body: JSON.stringify(body)
         });
+
+        // If 401 and we have refresh token, try to refresh
+        if (response.status === 401 && refreshToken && db) {
+            console.log('[Kick] Got 401, attempting token refresh...');
+            const newTokens = await this.refreshAccessToken(refreshToken);
+
+            if (newTokens && newTokens.access_token) {
+                // Update tokens in database
+                await db.updateChannelTokens(channelId, newTokens.access_token, newTokens.refresh_token, newTokens.expires_in || 3600);
+                console.log('[Kick] Tokens updated, retrying message...');
+
+                // Retry with new token
+                response = await fetch(`${KICK_API_BASE}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${newTokens.access_token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+            }
+        }
 
         if (!response.ok) {
             const text = await response.text();

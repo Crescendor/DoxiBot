@@ -333,6 +333,15 @@ export const db = {
         await pool.query('UPDATE channels SET bot_enabled = $1 WHERE channel_id = $2', [enabled ? 1 : 0, channelId]);
     },
 
+    async updateChannelTokens(channelId, accessToken, refreshToken, expiresIn) {
+        const expiresAt = now() + expiresIn;
+        console.log(`[DB] Updating tokens for channel ${channelId}`);
+        await pool.query(
+            'UPDATE channels SET access_token = $1, refresh_token = $2, token_expires_at = $3 WHERE channel_id = $4::BIGINT',
+            [accessToken, refreshToken, expiresAt, String(channelId)]
+        );
+    },
+
     async deleteChannel(channelId) {
         const tables = ['channels', 'channel_commands', 'channel_settings', 'characters', 'inventory', 'battles', 'cooldowns', 'fishing', 'active_quests', 'completed_quests'];
         for (const table of tables) {
