@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const channelId = params.get('channel');
     const username = params.get('username');
     showNotification(`✅ ${username || 'Kanal'} aktifleştirildi!`, 'success');
-    if (channelId) currentChannelId = parseInt(channelId);
+    if (channelId) currentChannelId = channelId;
     window.history.replaceState({}, '', '/');
   }
 
@@ -74,11 +74,11 @@ async function loadStatus() {
 
     // Auto-select first channel or last selected
     if (!currentChannelId && channels.length > 0) {
-      currentChannelId = channels[0].id;
+      currentChannelId = String(channels[0].id);
     }
     if (currentChannelId) {
       select.value = currentChannelId;
-      const ch = channels.find(c => c.id === currentChannelId);
+      const ch = channels.find(c => String(c.id) === String(currentChannelId));
       document.getElementById('current-channel').textContent = ch ? `📺 ${ch.username}` : '';
     }
 
@@ -88,8 +88,8 @@ async function loadStatus() {
 
 function switchChannel() {
   const select = document.getElementById('channel-select');
-  currentChannelId = select.value ? parseInt(select.value) : null;
-  const ch = channels.find(c => c.id === currentChannelId);
+  currentChannelId = select.value || null;
+  const ch = channels.find(c => String(c.id) === String(currentChannelId));
   document.getElementById('current-channel').textContent = ch ? `📺 ${ch.username}` : '';
 
   // Reload current page data
