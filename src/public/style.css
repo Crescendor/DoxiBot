@@ -1790,3 +1790,29 @@ select.input {
   background: linear-gradient(135deg, #ff5252, #ff8a80);
   transform: translateY(-2px);
 }
+
+/* Bot Connect Button */
+.bot-connect-card {
+  margin-bottom: 20px;
+  border: 2px solid var(--accent);
+  background: linear-gradient(135deg, rgba(0, 200, 83, 0.1), rgba(0, 230, 118, 0.05));
+}
+
+.btn-connect-bot {
+  display: inline-block;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #00c853, #00e676);
+  color: #000;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 200, 83, 0.3);
+}
+
+.btn-connect-bot:hover {
+  background: linear-gradient(135deg, #00e676, #69f0ae);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 200, 83, 0.4);
+}

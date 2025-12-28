@@ -181,7 +181,7 @@ function navigateTo(page) {
   if (page === 'leaderboard') loadLeaderboard();
   if (page === 'chat') loadChatLog();
   if (page === 'channels') loadChannels();
-  if (page === 'dashboard') loadDashboard();
+  if (page === 'dashboard') { loadDashboard(); loadGameStatus(); }
   if (page === 'items') loadItems();
   if (page === 'monsters') loadMonsters();
   if (page === 'quests') loadQuests();
