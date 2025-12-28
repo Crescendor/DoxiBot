@@ -62,6 +62,9 @@
         <a href="#" class="nav-item" data-page="pshop">
           <span class="nav-icon">💎</span><span>Premium Dükkan</span>
         </a>
+        <a href="#" class="nav-item" data-page="settings">
+          <span class="nav-icon">⏱️</span><span>Ayarlar</span>
+        </a>
 
         <div class="nav-section">Super Admin</div>
         <a href="#" class="nav-item" data-page="channels">
@@ -294,7 +297,49 @@
               <span class="hint">Oyuncuların DoxiGem ile satın alabileceği eşyalar</span>
             </div>
             <div class="card-body">
-              <div id="pshop-items" class="shop-grid"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings -->
+        <div id="page-settings" class="page">
+          <div class="card">
+            <div class="card-header">
+              <h3>⏱️ Oyun Ayarları</h3>
+              <span class="hint">Cooldown ve süreler saniye cinsindendir</span>
+            </div>
+            <div class="card-body">
+              <div class="settings-grid">
+                <div class="setting-item">
+                  <label>🎯 Av Cooldown</label>
+                  <div class="setting-input">
+                    <input type="number" id="set-hunt-cd" class="input" value="30">
+                    <span class="unit">sn</span>
+                  </div>
+                </div>
+                <div class="setting-item">
+                  <label>⚔️ Saldırı Cooldown</label>
+                  <div class="setting-input">
+                    <input type="number" id="set-attack-cd" class="input" value="5">
+                    <span class="unit">sn</span>
+                  </div>
+                </div>
+                <div class="setting-item">
+                  <label>🎁 Günlük Cooldown</label>
+                  <div class="setting-input">
+                    <input type="number" id="set-daily-cd" class="input" value="86400">
+                    <span class="unit">sn (24sa=86400)</span>
+                  </div>
+                </div>
+                <div class="setting-item">
+                  <label>🎣 Balık Süresi</label>
+                  <div class="setting-input">
+                    <input type="number" id="set-fish-dur" class="input" value="1200">
+                    <span class="unit">sn (20dk=1200)</span>
+                  </div>
+                </div>
+              </div>
+              <button class="btn btn-primary" onclick="saveSettings()" style="margin-top:16px">💾 Kaydet</button>
             </div>
           </div>
         </div>

@@ -38,7 +38,7 @@ function navigateTo(page) {
     dashboard: 'Dashboard', commands: '💬 Komutlar', players: '👥 Oyuncular',
     leaderboard: '🏆 Sıralama', chat: '📝 Chat Log', test: '🧪 Test',
     items: '🎒 Eşyalar', monsters: '👹 Canavarlar', quests: '📋 Görevler',
-    shop: '🏪 Dükkan', pshop: '💎 Premium Dükkan',
+    shop: '🏪 Dükkan', pshop: '💎 Premium Dükkan', settings: '⏱️ Ayarlar',
     channels: '📺 Tüm Kanallar', setup: '⚙️ Kurulum'
   };
   document.getElementById('page-title').textContent = titles[page] || page;
@@ -54,6 +54,7 @@ function navigateTo(page) {
   if (page === 'quests') loadQuests();
   if (page === 'shop') loadShop();
   if (page === 'pshop') loadPremiumShop();
+  if (page === 'settings') loadSettings();
 }
 
 async function loadStatus() {
@@ -876,4 +877,45 @@ async function addNewMonster() {
   });
 
   closeModal(); loadMonsters(); showNotification('✅ Eklendi!', 'success');
+}
+
+// ========== SETTINGS ==========
+async function loadSettings() {
+  if (!currentChannelId) {
+    showNotification('Önce kanal seçin', 'error');
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/admin/channel/${currentChannelId}/settings`);
+    const settings = await res.json();
+
+    document.getElementById('set-hunt-cd').value = settings.huntCooldown || 30;
+    document.getElementById('set-attack-cd').value = settings.attackCooldown || 5;
+    document.getElementById('set-daily-cd').value = settings.dailyCooldown || 86400;
+    document.getElementById('set-fish-dur').value = settings.fishingDuration || 1200;
+  } catch (e) {
+    console.error('Settings load error:', e);
+  }
+}
+
+async function saveSettings() {
+  if (!currentChannelId) {
+    showNotification('Önce kanal seçin', 'error');
+    return;
+  }
+
+  const settings = {
+    huntCooldown: parseInt(document.getElementById('set-hunt-cd').value) || 30,
+    attackCooldown: parseInt(document.getElementById('set-attack-cd').value) || 5,
+    dailyCooldown: parseInt(document.getElementById('set-daily-cd').value) || 86400,
+    fishingDuration: parseInt(document.getElementById('set-fish-dur').value) || 1200
+  };
+
+  await fetch(`/api/admin/channel/${currentChannelId}/settings`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings)
+  });
+
+  showNotification('✅ Ayarlar kaydedildi!', 'success');
 }

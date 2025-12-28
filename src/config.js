@@ -14,12 +14,25 @@ export const config = {
   // Super Admin (can manage all channels)
   superAdmin: process.env.SUPER_ADMIN || 'Doxish',
 
-  // Game defaults
+  // Game defaults (all times in seconds)
   game: {
-    huntCooldown: 30,
-    attackCooldown: 5,
-    dailyCooldown: 86400,
-    fishingDuration: 1200,
+    // Cooldowns
+    huntCooldown: 30,           // !av sonrası bekleme (30 sn)
+    attackCooldown: 5,          // !saldir sonrası bekleme (5 sn)
+    dailyCooldown: 86400,       // !gunluk (24 saat)
+
+    // Durations
+    fishingDuration: 1200,      // Balık tutma süresi (20 dk = 1200 sn)
+
+    // Level
     levelCap: 99
   }
+};
+
+// Default cooldowns (can be overridden per-channel)
+export const DEFAULT_COOLDOWNS = {
+  hunt: { cooldown: 30, label: 'Av Bekleme (sn)' },
+  attack: { cooldown: 5, label: 'Saldırı Bekleme (sn)' },
+  daily: { cooldown: 86400, label: 'Günlük Ödül (sn)' },
+  fishing: { duration: 1200, label: 'Balık Süresi (sn)' }
 };
