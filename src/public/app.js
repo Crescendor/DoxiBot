@@ -35,10 +35,11 @@ function navigateTo(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === `page-${page}`));
 
   const titles = {
-    dashboard: 'Dashboard', commands: '💬 Komutlar', players: '👥 Oyuncular',
+    dashboard: 'Dashboard', commands: '🎮 Oyun Komutları', players: '👥 Oyuncular',
     leaderboard: '🏆 Sıralama', chat: '📝 Chat Log', test: '🧪 Test',
+    customcmds: '💬 Özel Komutlar', pools: '🎲 Havuzlar',
     items: '🎒 Eşyalar', monsters: '👹 Canavarlar', quests: '📋 Görevler',
-    shop: '🏪 Dükkan', pshop: '💎 Premium Dükkan', settings: '⏱️ Ayarlar',
+    shop: '🏪 Dükkan', pshop: '💎 Premium Dükkan', settings: '⏱️ Oyun Ayarları',
     channels: '📺 Tüm Kanallar', setup: '⚙️ Kurulum'
   };
   document.getElementById('page-title').textContent = titles[page] || page;
@@ -55,6 +56,8 @@ function navigateTo(page) {
   if (page === 'shop') loadShop();
   if (page === 'pshop') loadPremiumShop();
   if (page === 'settings') loadSettings();
+  if (page === 'customcmds') loadCustomCommands();
+  if (page === 'pools') loadPools();
 }
 
 async function loadStatus() {
@@ -123,6 +126,9 @@ async function loadDashboard() {
         <div class="player-gold">${p.gold}💰</div>
       </div>
     `).join('') : '<div class="empty-state">Henüz oyuncu yok</div>';
+
+    // Load game status
+    loadGameStatus();
   } catch (e) { console.error('Dashboard error:', e); }
 }
 
@@ -918,4 +924,194 @@ async function saveSettings() {
   });
 
   showNotification('✅ Ayarlar kaydedildi!', 'success');
+}
+
+// ========== CUSTOM COMMANDS ==========
+async function loadCustomCommands() {
+  if (!currentChannelId) {
+    document.getElementById('custom-commands-list').innerHTML = '<div class="empty-state">Önce kanal seçin</div>';
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/admin/channel/${currentChannelId}/custom-commands`);
+    const commands = await res.json();
+
+    document.getElementById('custom-commands-list').innerHTML = commands.length > 0 ? commands.map(cmd => `
+      <div class="custom-cmd-item ${cmd.enabled ? '' : 'disabled'}">
+        <div class="cmd-header">
+          <span class="cmd-name">!${esc(cmd.command)}</span>
+          <div class="cmd-actions">
+            <span class="cmd-uses">${cmd.use_count || 0} kullanım</span>
+            <label class="toggle-switch">
+              <input type="checkbox" ${cmd.enabled ? 'checked' : ''} onchange="toggleCustomCmd('${esc(cmd.command)}', this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+            <button class="btn btn-small" onclick="editCustomCmd('${esc(cmd.command)}')">✏️</button>
+            <button class="btn btn-small btn-danger" onclick="deleteCustomCmd('${esc(cmd.command)}')">🗑️</button>
+          </div>
+        </div>
+        <div class="cmd-response">${esc(cmd.response)}</div>
+        ${cmd.sub_response ? `<div class="cmd-sub-response">👑 Abone: ${esc(cmd.sub_response)}</div>` : ''}
+        <div class="cmd-options">
+          ${cmd.reply_to_user ? '↩️ Cevap ver' : ''} 
+        </div>
+      </div>
+    `).join('') : '<div class="empty-state">Henüz özel komut yok</div>';
+  } catch (e) {
+    document.getElementById('custom-commands-list').innerHTML = '<div class="empty-state">Yüklenemedi</div>';
+  }
+}
+
+function openAddCustomCmdModal() {
+  openModal('➕ Yeni Özel Komut', `
+    <div class="form-group">
+      <label>Komut (! olmadan)</label>
+      <input type="text" id="new-cmd-name" class="input" placeholder="selam">
+    </div>
+    <div class="form-group">
+      <label>Cevap</label>
+      <textarea id="new-cmd-response" class="input" rows="3" placeholder="Merhaba {bahset}! How are you?"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Abone/Mod/Yayıncı Özel Cevabı (opsiyonel)</label>
+      <textarea id="new-cmd-sub-response" class="input" rows="2" placeholder="VIP cevap"></textarea>
+    </div>
+    <div class="form-row">
+      <label class="checkbox"><input type="checkbox" id="new-cmd-reply" checked> Kullanıcıya cevap ver</label>
+      <label class="checkbox"><input type="checkbox" id="new-cmd-enabled" checked> Aktif</label>
+    </div>
+    <button class="btn btn-primary" onclick="saveNewCustomCmd()">💾 Kaydet</button>
+  `);
+}
+
+async function saveNewCustomCmd() {
+  const command = document.getElementById('new-cmd-name').value.trim().toLowerCase();
+  const response = document.getElementById('new-cmd-response').value;
+  const sub_response = document.getElementById('new-cmd-sub-response').value || null;
+  const reply_to_user = document.getElementById('new-cmd-reply').checked;
+  const enabled = document.getElementById('new-cmd-enabled').checked;
+
+  if (!command || !response) {
+    showNotification('Komut ve cevap gerekli!', 'error');
+    return;
+  }
+
+  await fetch(`/api/admin/channel/${currentChannelId}/custom-command`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command, response, sub_response, reply_to_user, enabled })
+  });
+
+  closeModal(); loadCustomCommands(); showNotification('✅ Komut eklendi!', 'success');
+}
+
+async function toggleCustomCmd(command, enabled) {
+  await fetch(`/api/admin/channel/${currentChannelId}/custom-command`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command, response: '', enabled })
+  });
+  showNotification(enabled ? '✅ Açıldı' : '❌ Kapatıldı', 'success');
+}
+
+async function deleteCustomCmd(command) {
+  if (!confirm(`"!${command}" komutunu silmek istediğinize emin misiniz?`)) return;
+  await fetch(`/api/admin/channel/${currentChannelId}/custom-command/${command}`, { method: 'DELETE' });
+  loadCustomCommands(); showNotification('✅ Silindi', 'success');
+}
+
+function editCustomCmd(command) {
+  // Re-fetch and open modal with data
+  showNotification('Düzenleme modalı yakında eklenecek', 'info');
+}
+
+// ========== POOLS ==========
+async function loadPools() {
+  if (!currentChannelId) {
+    document.getElementById('pools-list').innerHTML = '<div class="empty-state">Önce kanal seçin</div>';
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/admin/channel/${currentChannelId}/pools`);
+    const pools = await res.json();
+
+    document.getElementById('pools-list').innerHTML = pools.length > 0 ? pools.map(pool => `
+      <div class="pool-item">
+        <div class="pool-header">
+          <span class="pool-name">{havuz[${esc(pool.pool_name)}]}</span>
+          <button class="btn btn-small btn-danger" onclick="deletePool('${esc(pool.pool_name)}')">🗑️</button>
+        </div>
+        <div class="pool-values">${esc(pool.values)}</div>
+      </div>
+    `).join('') : '<div class="empty-state">Henüz havuz yok</div>';
+  } catch (e) {
+    document.getElementById('pools-list').innerHTML = '<div class="empty-state">Yüklenemedi</div>';
+  }
+}
+
+function openAddPoolModal() {
+  openModal('➕ Yeni Havuz', `
+    <div class="form-group">
+      <label>Havuz Adı</label>
+      <input type="text" id="new-pool-name" class="input" placeholder="renk">
+    </div>
+    <div class="form-group">
+      <label>Değerler (virgülle ayır)</label>
+      <textarea id="new-pool-values" class="input" rows="3" placeholder="kirmizi, mavi, yesil, sari"></textarea>
+    </div>
+    <button class="btn btn-primary" onclick="saveNewPool()">💾 Kaydet</button>
+  `);
+}
+
+async function saveNewPool() {
+  const pool_name = document.getElementById('new-pool-name').value.trim().toLowerCase();
+  const values = document.getElementById('new-pool-values').value;
+
+  if (!pool_name || !values) {
+    showNotification('Havuz adı ve değerler gerekli!', 'error');
+    return;
+  }
+
+  await fetch(`/api/admin/channel/${currentChannelId}/pool`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pool_name, values })
+  });
+
+  closeModal(); loadPools(); showNotification('✅ Havuz eklendi!', 'success');
+}
+
+async function deletePool(poolName) {
+  if (!confirm(`"${poolName}" havuzunu silmek istediğinize emin misiniz?`)) return;
+  await fetch(`/api/admin/channel/${currentChannelId}/pool/${poolName}`, { method: 'DELETE' });
+  loadPools(); showNotification('✅ Silindi', 'success');
+}
+
+// ========== GAME TOGGLE ==========
+async function loadGameStatus() {
+  if (!currentChannelId) return;
+
+  try {
+    const res = await fetch(`/api/admin/channel/${currentChannelId}/game-status`);
+    const data = await res.json();
+
+    document.getElementById('game-enabled-toggle').checked = data.game_enabled;
+    document.getElementById('game-status-text').textContent = data.game_enabled ? 'Açık' : 'Kapalı';
+  } catch (e) {
+    console.error('Game status error:', e);
+  }
+}
+
+async function toggleGame(enabled) {
+  if (!currentChannelId) {
+    showNotification('Önce kanal seçin', 'error');
+    return;
+  }
+
+  await fetch(`/api/admin/channel/${currentChannelId}/game-toggle`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled })
+  });
+
+  document.getElementById('game-status-text').textContent = enabled ? 'Açık' : 'Kapalı';
+  showNotification(enabled ? '🎮 RPG Oyun açıldı!' : '⏸️ RPG Oyun kapatıldı', 'success');
 }

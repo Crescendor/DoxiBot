@@ -171,6 +171,46 @@ async function initDatabase() {
         response TEXT,
         created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())
       );
+
+      -- Custom commands (user-defined)
+      CREATE TABLE IF NOT EXISTS custom_commands (
+        id SERIAL PRIMARY KEY,
+        channel_id BIGINT NOT NULL,
+        command TEXT NOT NULL,
+        response TEXT NOT NULL,
+        sub_response TEXT,
+        reply_to_user INTEGER DEFAULT 1,
+        enabled INTEGER DEFAULT 1,
+        use_count INTEGER DEFAULT 0,
+        created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW()),
+        UNIQUE(channel_id, command)
+      );
+
+      -- Command counters (for {sayaç} variable)
+      CREATE TABLE IF NOT EXISTS command_counters (
+        channel_id BIGINT NOT NULL,
+        counter_name TEXT NOT NULL,
+        count INTEGER DEFAULT 0,
+        PRIMARY KEY (channel_id, counter_name)
+      );
+
+      -- Pools (for {havuz} variable)
+      CREATE TABLE IF NOT EXISTS pools (
+        id SERIAL PRIMARY KEY,
+        channel_id BIGINT NOT NULL,
+        pool_name TEXT NOT NULL,
+        values TEXT NOT NULL,
+        UNIQUE(channel_id, pool_name)
+      );
+
+      -- Add game_enabled column to channels if not exists
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name = 'channels' AND column_name = 'game_enabled') THEN
+          ALTER TABLE channels ADD COLUMN game_enabled INTEGER DEFAULT 1;
+        END IF;
+      END $$;
     `);
         console.log('✅ PostgreSQL veritabanı başlatıldı');
     } finally {
@@ -463,5 +503,71 @@ export const db = {
         const totalPlayers = (await queryOne('SELECT COUNT(*) as count FROM characters'))?.count || 0;
         const activeBattles = (await queryOne('SELECT COUNT(*) as count FROM battles'))?.count || 0;
         return { totalChannels: parseInt(totalChannels), totalPlayers: parseInt(totalPlayers), activeBattles: parseInt(activeBattles) };
+    },
+
+    // ========== CUSTOM COMMANDS ==========
+    async getCustomCommands(channelId) {
+        return query('SELECT * FROM custom_commands WHERE channel_id = $1 ORDER BY command', [channelId]);
+    },
+    async getCustomCommand(channelId, command) {
+        return queryOne('SELECT * FROM custom_commands WHERE channel_id = $1 AND command = $2', [channelId, command.toLowerCase()]);
+    },
+    async upsertCustomCommand(channelId, command, data) {
+        await pool.query(`
+            INSERT INTO custom_commands (channel_id, command, response, sub_response, reply_to_user, enabled)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            ON CONFLICT (channel_id, command) DO UPDATE SET
+                response = $3,
+                sub_response = $4,
+                reply_to_user = $5,
+                enabled = $6
+        `, [channelId, command.toLowerCase(), data.response, data.sub_response || null, data.reply_to_user ? 1 : 0, data.enabled ? 1 : 0]);
+    },
+    async deleteCustomCommand(channelId, command) {
+        await pool.query('DELETE FROM custom_commands WHERE channel_id = $1 AND command = $2', [channelId, command.toLowerCase()]);
+    },
+    async incrementCommandUse(channelId, command) {
+        await pool.query('UPDATE custom_commands SET use_count = use_count + 1 WHERE channel_id = $1 AND command = $2', [channelId, command]);
+    },
+
+    // ========== COMMAND COUNTERS ==========
+    async getCounter(channelId, counterName) {
+        const row = await queryOne('SELECT count FROM command_counters WHERE channel_id = $1 AND counter_name = $2', [channelId, counterName]);
+        return row?.count || 0;
+    },
+    async incrementCounter(channelId, counterName) {
+        await pool.query(`
+            INSERT INTO command_counters (channel_id, counter_name, count)
+            VALUES ($1, $2, 1)
+            ON CONFLICT (channel_id, counter_name) DO UPDATE SET count = command_counters.count + 1
+        `, [channelId, counterName]);
+        return (await this.getCounter(channelId, counterName));
+    },
+
+    // ========== POOLS ==========
+    async getPools(channelId) {
+        return query('SELECT * FROM pools WHERE channel_id = $1 ORDER BY pool_name', [channelId]);
+    },
+    async getPool(channelId, poolName) {
+        return queryOne('SELECT * FROM pools WHERE channel_id = $1 AND pool_name = $2', [channelId, poolName.toLowerCase()]);
+    },
+    async upsertPool(channelId, poolName, values) {
+        await pool.query(`
+            INSERT INTO pools (channel_id, pool_name, values)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (channel_id, pool_name) DO UPDATE SET values = $3
+        `, [channelId, poolName.toLowerCase(), values]);
+    },
+    async deletePool(channelId, poolName) {
+        await pool.query('DELETE FROM pools WHERE channel_id = $1 AND pool_name = $2', [channelId, poolName.toLowerCase()]);
+    },
+
+    // ========== GAME TOGGLE ==========
+    async getGameEnabled(channelId) {
+        const row = await queryOne('SELECT game_enabled FROM channels WHERE channel_id = $1', [channelId]);
+        return row?.game_enabled !== 0;
+    },
+    async setGameEnabled(channelId, enabled) {
+        await pool.query('UPDATE channels SET game_enabled = $1 WHERE channel_id = $2', [enabled ? 1 : 0, channelId]);
     }
 };

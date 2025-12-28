@@ -30,8 +30,18 @@
         <a href="#" class="nav-item active" data-page="dashboard">
           <span class="nav-icon">📊</span><span>Dashboard</span>
         </a>
+
+        <div class="nav-section">Bot Özellikleri</div>
+        <a href="#" class="nav-item" data-page="customcmds">
+          <span class="nav-icon">💬</span><span>Özel Komutlar</span>
+        </a>
+        <a href="#" class="nav-item" data-page="pools">
+          <span class="nav-icon">🎲</span><span>Havuzlar</span>
+        </a>
+
+        <div class="nav-section">RPG Oyunu</div>
         <a href="#" class="nav-item" data-page="commands">
-          <span class="nav-icon">💬</span><span>Komutlar</span>
+          <span class="nav-icon">🎮</span><span>Oyun Komutları</span>
         </a>
         <a href="#" class="nav-item" data-page="players">
           <span class="nav-icon">👥</span><span>Oyuncular</span>
@@ -39,14 +49,6 @@
         <a href="#" class="nav-item" data-page="leaderboard">
           <span class="nav-icon">🏆</span><span>Sıralama</span>
         </a>
-        <a href="#" class="nav-item" data-page="chat">
-          <span class="nav-icon">📝</span><span>Chat Log</span>
-        </a>
-        <a href="#" class="nav-item" data-page="test">
-          <span class="nav-icon">🧪</span><span>Test</span>
-        </a>
-
-        <div class="nav-section">Oyun İçeriği</div>
         <a href="#" class="nav-item" data-page="items">
           <span class="nav-icon">🎒</span><span>Eşyalar</span>
         </a>
@@ -62,8 +64,16 @@
         <a href="#" class="nav-item" data-page="pshop">
           <span class="nav-icon">💎</span><span>Premium Dükkan</span>
         </a>
+
+        <div class="nav-section">Ayarlar</div>
         <a href="#" class="nav-item" data-page="settings">
-          <span class="nav-icon">⏱️</span><span>Ayarlar</span>
+          <span class="nav-icon">⏱️</span><span>Oyun Ayarları</span>
+        </a>
+        <a href="#" class="nav-item" data-page="chat">
+          <span class="nav-icon">📝</span><span>Chat Log</span>
+        </a>
+        <a href="#" class="nav-item" data-page="test">
+          <span class="nav-icon">🧪</span><span>Test</span>
         </a>
 
         <div class="nav-section">Super Admin</div>
@@ -115,280 +125,320 @@
                   class="stat-label">Balıkçı</span></div>
             </div>
           </div>
-          <div class="card">
-            <div class="card-header">
-              <h3>🏆 Top 5</h3>
-            </div>
-            <div class="card-body">
-              <div id="top-players" class="player-list">
-                <div class="empty-state">Oyuncu yok</div>
-              </div>
-            </div>
-          </div>
         </div>
-
-        <!-- Commands (Per-Channel with Descriptions) -->
-        <div id="page-commands" class="page">
-          <div class="card">
-            <div class="card-header">
-              <h3>💬 Komut Yönetimi</h3>
-              <span class="hint">Her komut ayrı ayrı açılıp kapatılabilir</span>
-            </div>
-            <div class="card-body">
-              <div id="commands-list" class="commands-editor"></div>
-            </div>
-          </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h3>🎮 RPG Oyun Durumu</h3>
         </div>
-
-        <!-- Players -->
-        <div id="page-players" class="page">
-          <div class="card full-height">
-            <div class="card-header">
-              <h3>👥 Oyuncular</h3><button class="btn btn-small" onclick="loadPlayers()">🔄</button>
-            </div>
-            <div class="card-body">
-              <div id="players-list" class="data-table"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Leaderboard -->
-        <div id="page-leaderboard" class="page">
-          <div class="card full-height">
-            <div class="card-header">
-              <h3>🏆 Sıralama</h3>
-            </div>
-            <div class="card-body">
-              <div id="leaderboard" class="leaderboard"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Chat Log -->
-        <div id="page-chat" class="page">
-          <div class="card full-height">
-            <div class="card-header">
-              <h3>📝 Chat Log</h3><button class="btn btn-small" onclick="loadChatLog()">🔄</button>
-            </div>
-            <div class="card-body">
-              <div id="chat-log" class="chat-log"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Test -->
-        <div id="page-test" class="page">
-          <div class="card">
-            <div class="card-header">
-              <h3>🧪 Komut Test</h3>
-            </div>
-            <div class="card-body">
-              <div class="test-form">
-                <div class="form-row">
-                  <div class="form-group"><label>Kullanıcı</label><input type="text" id="test-username" value="TestUser"
-                      class="input"></div>
-                  <div class="form-group"><label>ID</label><input type="number" id="test-userid" value="12345"
-                      class="input"></div>
-                </div>
-                <div class="form-group"><label>Komut</label><input type="text" id="test-command"
-                    placeholder="!kayit warrior" class="input"></div>
-                <button class="btn btn-primary" onclick="testCommand()">▶️ Test Et</button>
-              </div>
-              <div id="test-result" class="test-result hidden">
-                <h4>Sonuç:</h4>
-                <pre id="test-response"></pre>
-              </div>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-header">
-              <h3>⚡ Hızlı Test</h3>
-            </div>
-            <div class="card-body">
-              <div class="quick-commands">
-                <button class="btn" onclick="quickTest('!kayit warrior')">!kayit</button>
-                <button class="btn" onclick="quickTest('!profil')">!profil</button>
-                <button class="btn" onclick="quickTest('!av')">!av</button>
-                <button class="btn" onclick="quickTest('!saldir')">!saldir</button>
-                <button class="btn" onclick="quickTest('!balik')">!balik</button>
-                <button class="btn" onclick="quickTest('!dukkan')">!dukkan</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Items -->
-        <div id="page-items" class="page">
-          <div class="card">
-            <div class="card-header">
-              <h3>🎒 Eşyalar</h3>
-              <div class="filter-row">
-                <select id="item-type-filter" class="input" onchange="filterItems()">
-                  <option value="">Tümü</option>
-                  <option value="weapon">Silahlar</option>
-                  <option value="armor">Zırhlar</option>
-                  <option value="accessory">Aksesuarlar</option>
-                  <option value="consumable">Tüketilebilir</option>
-                  <option value="fishing">Balıkçılık</option>
-                  <option value="premium">Premium</option>
-                </select>
-                <button class="btn btn-primary" onclick="openAddItemModal()">+ Yeni Eşya</button>
-              </div>
-            </div>
-            <div class="card-body">
-              <div id="items-list" class="items-grid"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Monsters -->
-        <div id="page-monsters" class="page">
-          <div class="card">
-            <div class="card-header">
-              <h3>👹 Canavarlar</h3>
-              <div class="filter-row">
-                <select id="monster-level-filter" class="input" onchange="filterMonsters()">
-                  <option value="">Tümü</option>
-                  <option value="1">Lv.1-10</option>
-                  <option value="10">Lv.10-30</option>
-                  <option value="30">Lv.30-50</option>
-                  <option value="50">Lv.50+</option>
-                </select>
-                <button class="btn btn-primary" onclick="openAddMonsterModal()">+ Yeni Canavar</button>
-              </div>
-            </div>
-            <div class="card-body">
-              <div id="monsters-list" class="monsters-grid"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Quests -->
-        <div id="page-quests" class="page">
-          <div class="card">
-            <div class="card-header">
-              <h3>📋 Görevler</h3>
-              <button class="btn btn-primary" onclick="openAddQuestModal()">+ Yeni Görev</button>
-            </div>
-            <div class="card-body">
-              <div id="quests-list" class="quests-list"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Shop -->
-        <div id="page-shop" class="page">
-          <div class="card">
-            <div class="card-header">
-              <h3>🏪 Dükkan (Altın)</h3>
-              <span class="hint">Oyuncuların altınla satın alabileceği eşyalar</span>
-            </div>
-            <div class="card-body">
-              <div id="shop-items" class="shop-grid"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Premium Shop -->
-        <div id="page-pshop" class="page">
-          <div class="card">
-            <div class="card-header">
-              <h3>💎 Premium Dükkan (DoxiGem)</h3>
-              <span class="hint">Oyuncuların DoxiGem ile satın alabileceği eşyalar</span>
-            </div>
-            <div class="card-body">
-            </div>
-          </div>
-        </div>
-
-        <!-- Settings -->
-        <div id="page-settings" class="page">
-          <div class="card">
-            <div class="card-header">
-              <h3>⏱️ Oyun Ayarları</h3>
-              <span class="hint">Cooldown ve süreler saniye cinsindendir</span>
-            </div>
-            <div class="card-body">
-              <div class="settings-grid">
-                <div class="setting-item">
-                  <label>🎯 Av Cooldown</label>
-                  <div class="setting-input">
-                    <input type="number" id="set-hunt-cd" class="input" value="30">
-                    <span class="unit">sn</span>
-                  </div>
-                </div>
-                <div class="setting-item">
-                  <label>⚔️ Saldırı Cooldown</label>
-                  <div class="setting-input">
-                    <input type="number" id="set-attack-cd" class="input" value="5">
-                    <span class="unit">sn</span>
-                  </div>
-                </div>
-                <div class="setting-item">
-                  <label>🎁 Günlük Cooldown</label>
-                  <div class="setting-input">
-                    <input type="number" id="set-daily-cd" class="input" value="86400">
-                    <span class="unit">sn (24sa=86400)</span>
-                  </div>
-                </div>
-                <div class="setting-item">
-                  <label>🎣 Balık Süresi</label>
-                  <div class="setting-input">
-                    <input type="number" id="set-fish-dur" class="input" value="1200">
-                    <span class="unit">sn (20dk=1200)</span>
-                  </div>
-                </div>
-              </div>
-              <button class="btn btn-primary" onclick="saveSettings()" style="margin-top:16px">💾 Kaydet</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- All Channels (Super Admin) -->
-        <div id="page-channels" class="page">
-          <div class="card">
-            <div class="card-header">
-              <h3>📺 Tüm Kanallar</h3><button class="btn btn-small" onclick="loadChannels()">🔄</button>
-            </div>
-            <div class="card-body">
-              <div id="channels-list" class="data-table"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Setup -->
-        <div id="page-setup" class="page">
-          <div class="card">
-            <div class="card-header">
-              <h3>⚙️ Webhook Ayarları</h3>
-            </div>
-            <div class="card-body">
-              <p>Kick Developer Panel'e aşağıdaki URL'leri ekleyin:</p>
-              <div class="setup-item">
-                <label>Redirect URI:</label>
-                <div class="webhook-url"><code id="redirect-uri">-</code><button class="btn btn-small"
-                    onclick="copyUrl('redirect-uri')">📋</button></div>
-              </div>
-              <div class="setup-item">
-                <label>Webhook URL:</label>
-                <div class="webhook-url"><code id="webhook-url">-</code><button class="btn btn-small"
-                    onclick="copyUrl('webhook-url')">📋</button></div>
-              </div>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-header">
-              <h3>📖 Bilgi</h3>
-            </div>
-            <div class="card-body">
-              <p><strong>Super Admin:</strong> Doxish</p>
-              <p><strong>Bot:</strong> DoxiBot</p>
-              <p>Her kullanıcı kendi kanalında bağımsız ayarlar yapabilir.</p>
-            </div>
+        <div class="card-body">
+          <div class="game-toggle">
+            <span>Bu kanal için RPG oyununu:</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="game-enabled-toggle" onchange="toggleGame(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+            <span id="game-status-text">Yükleniyor...</span>
           </div>
         </div>
       </div>
-    </main>
+  </div>
+
+  <!-- Custom Commands -->
+  <div id="page-customcmds" class="page">
+    <div class="card">
+      <div class="card-header">
+        <h3>💬 Özel Komutlar</h3>
+        <button class="btn btn-primary" onclick="openAddCustomCmdModal()">+ Yeni Komut</button>
+      </div>
+      <div class="card-body">
+        <div class="help-box">
+          <strong>Değişkenler:</strong> {bahset} {kullanici} {rastgele[x,y]} {havuz[isim]} {sayaç[isim]}
+          {nekadarkaldi[2025,1,1 00:00]}
+        </div>
+        <div id="custom-commands-list" class="custom-commands-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pools -->
+  <div id="page-pools" class="page">
+    <div class="card">
+      <div class="card-header">
+        <h3>🎲 Havuzlar</h3>
+        <button class="btn btn-primary" onclick="openAddPoolModal()">+ Yeni Havuz</button>
+      </div>
+      <div class="card-body">
+        <div class="help-box">
+          Havuz, rastgele seçim için kullanılır. {havuz[isim]} ile çağırılır. Değerler virgülle ayrılır.
+        </div>
+        <div id="pools-list" class="pools-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Commands (Per-Channel with Descriptions) -->
+  <div id="page-commands" class="page">
+    <div class="card">
+      <div class="card-header">
+        <h3>🎮 Oyun Komut Yönetimi</h3>
+        <span class="hint">RPG oyunu komutlarını açıp kapatabilirsiniz</span>
+      </div>
+      <div class="card-body">
+        <div id="commands-list" class="commands-editor"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Players -->
+  <div id="page-players" class="page">
+    <div class="card full-height">
+      <div class="card-header">
+        <h3>👥 Oyuncular</h3><button class="btn btn-small" onclick="loadPlayers()">🔄</button>
+      </div>
+      <div class="card-body">
+        <div id="players-list" class="data-table"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaderboard -->
+  <div id="page-leaderboard" class="page">
+    <div class="card full-height">
+      <div class="card-header">
+        <h3>🏆 Sıralama</h3>
+      </div>
+      <div class="card-body">
+        <div id="leaderboard" class="leaderboard"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat Log -->
+  <div id="page-chat" class="page">
+    <div class="card full-height">
+      <div class="card-header">
+        <h3>📝 Chat Log</h3><button class="btn btn-small" onclick="loadChatLog()">🔄</button>
+      </div>
+      <div class="card-body">
+        <div id="chat-log" class="chat-log"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test -->
+  <div id="page-test" class="page">
+    <div class="card">
+      <div class="card-header">
+        <h3>🧪 Komut Test</h3>
+      </div>
+      <div class="card-body">
+        <div class="test-form">
+          <div class="form-row">
+            <div class="form-group"><label>Kullanıcı</label><input type="text" id="test-username" value="TestUser"
+                class="input"></div>
+            <div class="form-group"><label>ID</label><input type="number" id="test-userid" value="12345" class="input">
+            </div>
+          </div>
+          <div class="form-group"><label>Komut</label><input type="text" id="test-command" placeholder="!kayit warrior"
+              class="input"></div>
+          <button class="btn btn-primary" onclick="testCommand()">▶️ Test Et</button>
+        </div>
+        <div id="test-result" class="test-result hidden">
+          <h4>Sonuç:</h4>
+          <pre id="test-response"></pre>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <h3>⚡ Hızlı Test</h3>
+      </div>
+      <div class="card-body">
+        <div class="quick-commands">
+          <button class="btn" onclick="quickTest('!kayit warrior')">!kayit</button>
+          <button class="btn" onclick="quickTest('!profil')">!profil</button>
+          <button class="btn" onclick="quickTest('!av')">!av</button>
+          <button class="btn" onclick="quickTest('!saldir')">!saldir</button>
+          <button class="btn" onclick="quickTest('!balik')">!balik</button>
+          <button class="btn" onclick="quickTest('!dukkan')">!dukkan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Items -->
+  <div id="page-items" class="page">
+    <div class="card">
+      <div class="card-header">
+        <h3>🎒 Eşyalar</h3>
+        <div class="filter-row">
+          <select id="item-type-filter" class="input" onchange="filterItems()">
+            <option value="">Tümü</option>
+            <option value="weapon">Silahlar</option>
+            <option value="armor">Zırhlar</option>
+            <option value="accessory">Aksesuarlar</option>
+            <option value="consumable">Tüketilebilir</option>
+            <option value="fishing">Balıkçılık</option>
+            <option value="premium">Premium</option>
+          </select>
+          <button class="btn btn-primary" onclick="openAddItemModal()">+ Yeni Eşya</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="items-list" class="items-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monsters -->
+  <div id="page-monsters" class="page">
+    <div class="card">
+      <div class="card-header">
+        <h3>👹 Canavarlar</h3>
+        <div class="filter-row">
+          <select id="monster-level-filter" class="input" onchange="filterMonsters()">
+            <option value="">Tümü</option>
+            <option value="1">Lv.1-10</option>
+            <option value="10">Lv.10-30</option>
+            <option value="30">Lv.30-50</option>
+            <option value="50">Lv.50+</option>
+          </select>
+          <button class="btn btn-primary" onclick="openAddMonsterModal()">+ Yeni Canavar</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="monsters-list" class="monsters-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quests -->
+  <div id="page-quests" class="page">
+    <div class="card">
+      <div class="card-header">
+        <h3>📋 Görevler</h3>
+        <button class="btn btn-primary" onclick="openAddQuestModal()">+ Yeni Görev</button>
+      </div>
+      <div class="card-body">
+        <div id="quests-list" class="quests-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shop -->
+  <div id="page-shop" class="page">
+    <div class="card">
+      <div class="card-header">
+        <h3>🏪 Dükkan (Altın)</h3>
+        <span class="hint">Oyuncuların altınla satın alabileceği eşyalar</span>
+      </div>
+      <div class="card-body">
+        <div id="shop-items" class="shop-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Premium Shop -->
+  <div id="page-pshop" class="page">
+    <div class="card">
+      <div class="card-header">
+        <h3>💎 Premium Dükkan (DoxiGem)</h3>
+        <span class="hint">Oyuncuların DoxiGem ile satın alabileceği eşyalar</span>
+      </div>
+      <div class="card-body">
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div id="page-settings" class="page">
+    <div class="card">
+      <div class="card-header">
+        <h3>⏱️ Oyun Ayarları</h3>
+        <span class="hint">Cooldown ve süreler saniye cinsindendir</span>
+      </div>
+      <div class="card-body">
+        <div class="settings-grid">
+          <div class="setting-item">
+            <label>🎯 Av Cooldown</label>
+            <div class="setting-input">
+              <input type="number" id="set-hunt-cd" class="input" value="30">
+              <span class="unit">sn</span>
+            </div>
+          </div>
+          <div class="setting-item">
+            <label>⚔️ Saldırı Cooldown</label>
+            <div class="setting-input">
+              <input type="number" id="set-attack-cd" class="input" value="5">
+              <span class="unit">sn</span>
+            </div>
+          </div>
+          <div class="setting-item">
+            <label>🎁 Günlük Cooldown</label>
+            <div class="setting-input">
+              <input type="number" id="set-daily-cd" class="input" value="86400">
+              <span class="unit">sn (24sa=86400)</span>
+            </div>
+          </div>
+          <div class="setting-item">
+            <label>🎣 Balık Süresi</label>
+            <div class="setting-input">
+              <input type="number" id="set-fish-dur" class="input" value="1200">
+              <span class="unit">sn (20dk=1200)</span>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveSettings()" style="margin-top:16px">💾 Kaydet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- All Channels (Super Admin) -->
+  <div id="page-channels" class="page">
+    <div class="card">
+      <div class="card-header">
+        <h3>📺 Tüm Kanallar</h3><button class="btn btn-small" onclick="loadChannels()">🔄</button>
+      </div>
+      <div class="card-body">
+        <div id="channels-list" class="data-table"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Setup -->
+  <div id="page-setup" class="page">
+    <div class="card">
+      <div class="card-header">
+        <h3>⚙️ Webhook Ayarları</h3>
+      </div>
+      <div class="card-body">
+        <p>Kick Developer Panel'e aşağıdaki URL'leri ekleyin:</p>
+        <div class="setup-item">
+          <label>Redirect URI:</label>
+          <div class="webhook-url"><code id="redirect-uri">-</code><button class="btn btn-small"
+              onclick="copyUrl('redirect-uri')">📋</button></div>
+        </div>
+        <div class="setup-item">
+          <label>Webhook URL:</label>
+          <div class="webhook-url"><code id="webhook-url">-</code><button class="btn btn-small"
+              onclick="copyUrl('webhook-url')">📋</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <h3>📖 Bilgi</h3>
+      </div>
+      <div class="card-body">
+        <p><strong>Super Admin:</strong> Doxish</p>
+        <p><strong>Bot:</strong> DoxiBot</p>
+        <p>Her kullanıcı kendi kanalında bağımsız ayarlar yapabilir.</p>
+      </div>
+    </div>
+  </div>
+  </div>
+  </main>
   </div>
 
   <div id="modal" class="modal hidden">

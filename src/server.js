@@ -6,9 +6,11 @@ import { db } from './db/database.js';
 import { kickApi } from './api/kick.js';
 import { getAuthorizationUrl, exchangeCodeForTokens } from './auth/oauth.js';
 import { processCommand } from './game/engine.js';
+import { processCustomCommand } from './commands/customCommands.js';
 import { getAllMonsters } from './data/monsters.js';
 import { getAllItems, rarityColors } from './data/items.js';
 import { getAllQuests } from './data/quests.js';
+
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -117,12 +119,34 @@ app.post('/webhook', async (req, res) => {
             };
 
             console.log(`[Chat] ${channel.owner_username} | ${message.sender?.username}: ${message.content}`);
-            const response = await processCommand(channelId, message);
 
-            if (response) {
-                console.log(`[Bot] Sending response: ${response.substring(0, 50)}...`);
-                await kickApi.sendMessageToChannel(channelId, channel.access_token, response, message.message_id);
-                console.log('[Bot] Response sent successfully');
+            // Check if message is a command (!xxx)
+            if (message.content?.startsWith('!')) {
+                const cmdParts = message.content.slice(1).split(' ');
+                const cmdName = cmdParts[0].toLowerCase();
+
+                // 1. Check custom commands first
+                const customResult = await processCustomCommand(channelId, cmdName, message);
+                if (customResult) {
+                    console.log(`[Bot] Custom command response: ${customResult.response.substring(0, 50)}...`);
+                    const replyTo = customResult.reply_to_user ? message.message_id : null;
+                    await kickApi.sendMessageToChannel(channelId, channel.access_token, customResult.response, replyTo);
+                    console.log('[Bot] Custom command sent');
+                    return res.status(200).json({ received: true });
+                }
+
+                // 2. Check if game is enabled for game commands
+                const gameEnabled = await db.getGameEnabled(channelId);
+                if (gameEnabled) {
+                    const response = await processCommand(channelId, message);
+                    if (response) {
+                        console.log(`[Bot] Game response: ${response.substring(0, 50)}...`);
+                        await kickApi.sendMessageToChannel(channelId, channel.access_token, response, message.message_id);
+                        console.log('[Bot] Game response sent');
+                    }
+                } else {
+                    console.log('[Bot] Game is disabled for this channel');
+                }
             }
         }
         res.status(200).json({ received: true });
@@ -296,6 +320,74 @@ app.post('/api/test-command', async (req, res) => {
         const response = await processCommand(channelId || 0, message);
         res.json({ response });
     } catch (e) { res.json({ response: `❌ Hata: ${e.message}` }); }
+});
+
+// ========== CUSTOM COMMANDS API ==========
+app.get('/api/admin/channel/:id/custom-commands', async (req, res) => {
+    try { res.json(await db.getCustomCommands(parseInt(req.params.id))); }
+    catch (e) { res.json([]); }
+});
+
+app.post('/api/admin/channel/:id/custom-command', async (req, res) => {
+    try {
+        const channelId = parseInt(req.params.id);
+        const { command, response, sub_response, reply_to_user, enabled } = req.body;
+        if (!command || !response) return res.status(400).json({ error: 'Komut ve cevap gerekli' });
+
+        await db.upsertCustomCommand(channelId, command, {
+            response,
+            sub_response: sub_response || null,
+            reply_to_user: reply_to_user !== false,
+            enabled: enabled !== false
+        });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/admin/channel/:id/custom-command/:cmd', async (req, res) => {
+    try {
+        await db.deleteCustomCommand(parseInt(req.params.id), req.params.cmd);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ========== POOLS API ==========
+app.get('/api/admin/channel/:id/pools', async (req, res) => {
+    try { res.json(await db.getPools(parseInt(req.params.id))); }
+    catch (e) { res.json([]); }
+});
+
+app.post('/api/admin/channel/:id/pool', async (req, res) => {
+    try {
+        const channelId = parseInt(req.params.id);
+        const { pool_name, values } = req.body;
+        if (!pool_name || !values) return res.status(400).json({ error: 'Havuz adı ve değerler gerekli' });
+
+        await db.upsertPool(channelId, pool_name, values);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/admin/channel/:id/pool/:name', async (req, res) => {
+    try {
+        await db.deletePool(parseInt(req.params.id), req.params.name);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ========== GAME TOGGLE ==========
+app.get('/api/admin/channel/:id/game-status', async (req, res) => {
+    try {
+        const enabled = await db.getGameEnabled(parseInt(req.params.id));
+        res.json({ game_enabled: enabled });
+    } catch (e) { res.json({ game_enabled: true }); }
+});
+
+app.post('/api/admin/channel/:id/game-toggle', async (req, res) => {
+    try {
+        await db.setGameEnabled(parseInt(req.params.id), req.body.enabled);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
