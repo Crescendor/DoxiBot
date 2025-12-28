@@ -179,12 +179,22 @@ async function initDatabase() {
         command TEXT NOT NULL,
         response TEXT NOT NULL,
         sub_response TEXT,
+        user_responses TEXT,
         reply_to_user INTEGER DEFAULT 1,
         enabled INTEGER DEFAULT 1,
         use_count INTEGER DEFAULT 0,
         created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW()),
         UNIQUE(channel_id, command)
       );
+
+      -- Add user_responses column if not exists
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name = 'custom_commands' AND column_name = 'user_responses') THEN
+          ALTER TABLE custom_commands ADD COLUMN user_responses TEXT;
+        END IF;
+      END $$;
 
       -- Command counters (for {sayaç} variable)
       CREATE TABLE IF NOT EXISTS command_counters (
@@ -525,14 +535,15 @@ export const db = {
     },
     async upsertCustomCommand(channelId, command, data) {
         await pool.query(`
-            INSERT INTO custom_commands (channel_id, command, response, sub_response, reply_to_user, enabled)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO custom_commands (channel_id, command, response, sub_response, user_responses, reply_to_user, enabled)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             ON CONFLICT (channel_id, command) DO UPDATE SET
                 response = $3,
                 sub_response = $4,
-                reply_to_user = $5,
-                enabled = $6
-        `, [channelId, command.toLowerCase(), data.response, data.sub_response || null, data.reply_to_user ? 1 : 0, data.enabled ? 1 : 0]);
+                user_responses = $5,
+                reply_to_user = $6,
+                enabled = $7
+        `, [channelId, command.toLowerCase(), data.response, data.sub_response || null, data.user_responses || null, data.reply_to_user ? 1 : 0, data.enabled ? 1 : 0]);
     },
     async deleteCustomCommand(channelId, command) {
         await pool.query('DELETE FROM custom_commands WHERE channel_id = $1 AND command = $2', [channelId, command.toLowerCase()]);

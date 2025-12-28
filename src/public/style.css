@@ -1671,7 +1671,78 @@ select.input {
   border-top: 1px solid var(--border);
 }
 
-.page-info {
-  font-size: 14px;
+/* Modal Tabs */
+.tabs {
+  display: flex;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  font-family: 'Inter', sans-serif;
   color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  color: var(--text-primary);
+}
+
+.tab.active {
+  color: var(--accent);
+  border-bottom: 2px solid var(--accent);
+  font-weight: 500;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* User Response List */
+.user-responses-list {
+  max-height: 250px;
+  overflow-y: auto;
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-secondary);
+}
+
+.user-response-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.user-response-item:last-child {
+  border-bottom: none;
+}
+
+.user-response-item strong {
+  color: var(--accent);
+}
+
+.input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.input-group input:first-child {
+  flex: 1;
+}
+
+.input-group input:nth-child(2) {
+  flex: 2;
 }

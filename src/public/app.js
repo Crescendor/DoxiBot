@@ -964,25 +964,49 @@ async function loadCustomCommands() {
 }
 
 function openAddCustomCmdModal() {
+  currentUserResponses = []; // Reset for new command
+
   openModal('➕ Yeni Özel Komut', `
-    <div class="form-group">
-      <label>Komut</label>
-      <input type="text" id="new-cmd-name" class="input" placeholder="!selam" value="!">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab(this, 'tab-general')">Genel</button>
+      <button class="tab" onclick="switchTab(this, 'tab-users')">Kullanıcıya Özel (0)</button>
     </div>
-    <div class="form-group">
-      <label>Cevap</label>
-      <textarea id="new-cmd-response" class="input" rows="3" placeholder="Merhaba {bahset}!"></textarea>
+
+    <div id="tab-general" class="tab-content active">
+      <div class="form-group">
+        <label>Komut Adı (! ile başlar)</label>
+        <input type="text" id="new-cmd-name" class="input" placeholder="!selam" value="!">
+      </div>
+      <div class="form-group">
+        <label>Cevap</label>
+        <textarea id="new-cmd-response" class="input" rows="3" placeholder="Merhaba {bahset}!"></textarea>
+      </div>
+      <div class="form-group">
+        <label>👑 Abone/Mod Özel Cevabı (boş bırakılabilir)</label>
+        <textarea id="new-cmd-sub-response" class="input" rows="2" placeholder=""></textarea>
+      </div>
+      <div class="form-row" style="margin:12px 0">
+        <label class="checkbox"><input type="checkbox" id="new-cmd-reply" checked> ↩️ Kullanıcıya cevap ver</label>
+        <label class="checkbox"><input type="checkbox" id="new-cmd-enabled" checked> ✅ Aktif</label>
+      </div>
     </div>
-    <div class="form-group">
-      <label>👑 Abone/Mod Özel Cevabı (boş bırakılabilir)</label>
-      <textarea id="new-cmd-sub-response" class="input" rows="2" placeholder=""></textarea>
+
+    <div id="tab-users" class="tab-content">
+      <div class="form-group">
+        <label>Kullanıcı Ekle</label>
+        <div class="input-group">
+          <input type="text" id="new-user-name" class="input" placeholder="kullaniciadi (başında @ olmadan)">
+          <input type="text" id="new-user-response" class="input" placeholder="Özel cevap...">
+          <button class="btn btn-secondary" onclick="addUserResponse()">Ekle</button>
+        </div>
+      </div>
+      <div id="user-responses-list" class="user-responses-list"></div>
     </div>
-    <div class="form-row" style="margin:12px 0">
-      <label class="checkbox"><input type="checkbox" id="new-cmd-reply" checked> ↩️ Kullanıcıya cevap ver</label>
-      <label class="checkbox"><input type="checkbox" id="new-cmd-enabled" checked> ✅ Aktif</label>
-    </div>
+
     <button class="btn btn-primary" onclick="saveNewCustomCmd()">💾 Kaydet</button>
   `);
+
+  renderUserResponsesList();
 }
 
 async function saveNewCustomCmd() {
@@ -1001,31 +1025,115 @@ async function saveNewCustomCmd() {
 
   await fetch(`/api/admin/channel/${currentChannelId}/custom-command`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ command, response, sub_response, reply_to_user, enabled })
+    body: JSON.stringify({
+      command,
+      response,
+      sub_response,
+      user_responses: JSON.stringify(currentUserResponses),
+      reply_to_user,
+      enabled
+    })
   });
 
   closeModal(); loadCustomCommands(); showNotification('✅ Komut eklendi!', 'success');
+}
+
+function switchTab(btn, tabId) {
+  // Remove active class from all tabs and contents in the same modal
+  const modalBody = btn.closest('.modal-body');
+  modalBody.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  modalBody.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+  // Activate selected tab and content
+  btn.classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+}
+
+
+let currentUserResponses = [];
+
+function renderUserResponsesList() {
+  const container = document.getElementById('user-responses-list');
+  if (!container) return;
+
+  container.innerHTML = currentUserResponses.map((item, index) => `
+    <div class="user-response-item">
+      <span><strong>@${esc(item.username)}:</strong> ${esc(item.response)}</span>
+      <button class="btn btn-small btn-danger" onclick="removeUserResponse(${index})">🗑️</button>
+    </div>
+  `).join('');
+}
+
+function addUserResponse() {
+  const username = document.getElementById('new-user-name').value.trim().replace('@', '');
+  const response = document.getElementById('new-user-response').value.trim();
+
+  if (!username || !response) {
+    showNotification('Kullanıcı adı ve cevap gerekli!', 'error');
+    return;
+  }
+
+  if (currentUserResponses.length >= 20) {
+    showNotification('En fazla 20 kullanıcı eklenebilir!', 'error');
+    return;
+  }
+
+  currentUserResponses.push({ username, response });
+  document.getElementById('new-user-name').value = '';
+  document.getElementById('new-user-response').value = '';
+  renderUserResponsesList();
+}
+
+function removeUserResponse(index) {
+  currentUserResponses.splice(index, 1);
+  renderUserResponsesList();
 }
 
 function editCustomCmd(command) {
   const cmd = allCustomCommands.find(c => c.command === command);
   if (!cmd) return;
 
+  try {
+    currentUserResponses = JSON.parse(cmd.user_responses || '[]');
+  } catch (e) { currentUserResponses = []; }
+
   openModal('✏️ Komutu Düzenle: !' + command, `
-    <div class="form-group">
-      <label>Cevap</label>
-      <textarea id="edit-cmd-response" class="input" rows="3">${esc(cmd.response)}</textarea>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab(this, 'tab-general')">Genel</button>
+      <button class="tab" onclick="switchTab(this, 'tab-users')">Kullanıcıya Özel (${currentUserResponses.length})</button>
     </div>
-    <div class="form-group">
-      <label>👑 Abone/Mod Özel Cevabı</label>
-      <textarea id="edit-cmd-sub-response" class="input" rows="2">${esc(cmd.sub_response || '')}</textarea>
+    
+    <div id="tab-general" class="tab-content active">
+      <div class="form-group">
+        <label>Cevap</label>
+        <textarea id="edit-cmd-response" class="input" rows="3">${esc(cmd.response)}</textarea>
+      </div>
+      <div class="form-group">
+        <label>👑 Abone/Mod Özel Cevabı</label>
+        <textarea id="edit-cmd-sub-response" class="input" rows="2">${esc(cmd.sub_response || '')}</textarea>
+      </div>
+      <div class="form-row" style="margin:12px 0">
+        <label class="checkbox"><input type="checkbox" id="edit-cmd-reply" ${cmd.reply_to_user ? 'checked' : ''}> ↩️ Kullanıcıya cevap ver</label>
+        <label class="checkbox"><input type="checkbox" id="edit-cmd-enabled" ${cmd.enabled ? 'checked' : ''}> ✅ Aktif</label>
+      </div>
     </div>
-    <div class="form-row" style="margin:12px 0">
-      <label class="checkbox"><input type="checkbox" id="edit-cmd-reply" ${cmd.reply_to_user ? 'checked' : ''}> ↩️ Kullanıcıya cevap ver</label>
-      <label class="checkbox"><input type="checkbox" id="edit-cmd-enabled" ${cmd.enabled ? 'checked' : ''}> ✅ Aktif</label>
+    
+    <div id="tab-users" class="tab-content">
+      <div class="form-group">
+        <label>Kullanıcı Ekle</label>
+        <div class="input-group">
+          <input type="text" id="new-user-name" class="input" placeholder="kullaniciadi (başında @ olmadan)">
+          <input type="text" id="new-user-response" class="input" placeholder="Özel cevap...">
+          <button class="btn btn-secondary" onclick="addUserResponse()">Ekle</button>
+        </div>
+      </div>
+      <div id="user-responses-list" class="user-responses-list"></div>
     </div>
+
     <button class="btn btn-primary" onclick="saveEditCustomCmd('${command}')">💾 Kaydet</button>
   `);
+
+  renderUserResponsesList();
 }
 
 async function saveEditCustomCmd(command) {
@@ -1041,7 +1149,14 @@ async function saveEditCustomCmd(command) {
 
   await fetch(`/api/admin/channel/${currentChannelId}/custom-command`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ command, response, sub_response, reply_to_user, enabled })
+    body: JSON.stringify({
+      command,
+      response,
+      sub_response,
+      user_responses: JSON.stringify(currentUserResponses),
+      reply_to_user,
+      enabled
+    })
   });
 
   closeModal(); loadCustomCommands(); showNotification('✅ Kaydedildi!', 'success');

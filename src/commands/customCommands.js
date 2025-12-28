@@ -133,9 +133,34 @@ export async function processCustomCommand(channelId, command, message) {
 
     const sender = message.sender;
 
-    // Choose response based on subscriber status
+    // Choose response based on priority:
+    // 1. User specific response
+    // 2. Subscriber/Mod response (if privileged)
+    // 3. Default response
+
     let response = cmd.response;
-    if (cmd.sub_response && isPrivileged(sender)) {
+
+    // Check user specific response first
+    if (cmd.user_responses) {
+        try {
+            const userResponses = JSON.parse(cmd.user_responses || '[]');
+            const username = sender.username.toLowerCase();
+            const userResponse = userResponses.find(u => u.username.toLowerCase() === username);
+
+            if (userResponse) {
+                response = userResponse.response;
+            } else if (cmd.sub_response && isPrivileged(sender)) {
+                // If no user response, checks for sub response
+                response = cmd.sub_response;
+            }
+        } catch (e) {
+            console.error('Error parsing user_responses:', e);
+            // Fallback to normal flow on error
+            if (cmd.sub_response && isPrivileged(sender)) {
+                response = cmd.sub_response;
+            }
+        }
+    } else if (cmd.sub_response && isPrivileged(sender)) {
         response = cmd.sub_response;
     }
 
