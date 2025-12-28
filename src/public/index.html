@@ -132,14 +132,11 @@
               <h3>🎮 Bu Kanal İçin RPG Durumu</h3>
             </div>
             <div class="card-body">
-              <div class="game-toggle">
-                <span><strong>Bu kanalda (@<span id="current-channel-name-toggle">...</span>)</strong> oyun aktif
-                  mi?</span>
-                <label class="toggle-switch">
-                  <input type="checkbox" id="game-enabled-toggle" onchange="toggleGame(this.checked)">
-                  <span class="toggle-slider"></span>
-                </label>
-                <span id="game-status-text">Yükleniyor...</span>
+              <div class="game-toggle-container">
+                <p><strong><span id="current-channel-name-toggle">...</span></strong> kanalı için RPG oyunu:</p>
+                <button id="game-toggle-btn" class="btn-game-toggle" onclick="toggleGameButton()">
+                  Yükleniyor...
+                </button>
               </div>
             </div>
           </div>

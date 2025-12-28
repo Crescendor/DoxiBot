@@ -1746,3 +1746,47 @@ select.input {
 .input-group input:nth-child(2) {
   flex: 2;
 }
+
+/* Game Toggle Button */
+.game-toggle-container {
+  text-align: center;
+  padding: 16px;
+}
+
+.game-toggle-container p {
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.btn-game-toggle {
+  padding: 16px 32px;
+  font-size: 18px;
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 200px;
+}
+
+.btn-game-toggle.game-on {
+  background: linear-gradient(135deg, #00c853, #00e676);
+  color: #000;
+  box-shadow: 0 4px 20px rgba(0, 200, 83, 0.4);
+}
+
+.btn-game-toggle.game-on:hover {
+  background: linear-gradient(135deg, #00e676, #69f0ae);
+  transform: translateY(-2px);
+}
+
+.btn-game-toggle.game-off {
+  background: linear-gradient(135deg, #ff1744, #ff5252);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(255, 23, 68, 0.4);
+}
+
+.btn-game-toggle.game-off:hover {
+  background: linear-gradient(135deg, #ff5252, #ff8a80);
+  transform: translateY(-2px);
+}

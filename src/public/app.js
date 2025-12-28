@@ -1355,6 +1355,8 @@ async function deletePool(poolName) {
 }
 
 // ========== GAME TOGGLE ==========
+let gameEnabled = false; // Store current state
+
 async function loadGameStatus() {
   console.log('[loadGameStatus] currentChannelId:', currentChannelId);
   if (!currentChannelId) return;
@@ -1366,38 +1368,59 @@ async function loadGameStatus() {
     const data = await res.json();
     console.log('[loadGameStatus] Response:', data);
 
-    document.getElementById('game-enabled-toggle').checked = data.game_enabled;
-    document.getElementById('game-status-text').textContent = data.game_enabled ? 'Açık' : 'Kapalı';
+    gameEnabled = data.game_enabled === true;
+    updateGameButton();
 
-    // Update channel name in toggle text
+    // Update channel name
     const ch = channels.find(c => String(c.id) === String(currentChannelId));
     if (ch) {
       const nameSpan = document.getElementById('current-channel-name-toggle');
-      if (nameSpan) nameSpan.textContent = ch.username || 'Bilinmeyen';
+      if (nameSpan) nameSpan.textContent = ch.username || currentChannelSlug || 'Bilinmeyen';
     }
   } catch (e) {
     console.error('[loadGameStatus] Error:', e);
   }
 }
 
-async function toggleGame(enabled) {
-  console.log('[toggleGame] enabled:', enabled, 'currentChannelId:', currentChannelId);
+function updateGameButton() {
+  const btn = document.getElementById('game-toggle-btn');
+  if (btn) {
+    btn.textContent = gameEnabled ? '🟢 Açık - Kapat' : '🔴 Kapalı - Aç';
+    btn.className = gameEnabled ? 'btn-game-toggle game-on' : 'btn-game-toggle game-off';
+  }
+}
+
+async function toggleGameButton() {
+  console.log('[toggleGameButton] currentChannelId:', currentChannelId, 'current state:', gameEnabled);
   if (!currentChannelId) {
     showNotification('Önce kanal seçin', 'error');
     return;
   }
 
+  const newState = !gameEnabled;
   const url = `/api/admin/channel/${currentChannelId}/game-toggle`;
-  console.log('[toggleGame] Posting to:', url);
-  const res = await fetch(url, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ enabled })
-  });
-  const result = await res.json();
-  console.log('[toggleGame] Response:', result);
+  console.log('[toggleGameButton] Posting to:', url, 'newState:', newState);
 
-  document.getElementById('game-status-text').textContent = enabled ? 'Açık' : 'Kapalı';
-  showNotification(enabled ? '🎮 RPG Oyun açıldı!' : '⏸️ RPG Oyun kapatıldı', 'success');
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: newState })
+    });
+    const result = await res.json();
+    console.log('[toggleGameButton] Response:', result);
+
+    if (result.success) {
+      gameEnabled = newState;
+      updateGameButton();
+      showNotification(newState ? '🎮 RPG Oyun açıldı!' : '⏸️ RPG Oyun kapatıldı', 'success');
+    } else {
+      showNotification('Toggle başarısız!', 'error');
+    }
+  } catch (e) {
+    console.error('[toggleGameButton] Error:', e);
+    showNotification('Toggle hatası!', 'error');
+  }
 }
 
 // ========== SUGGESTIONS ==========
