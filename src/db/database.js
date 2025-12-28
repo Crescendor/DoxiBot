@@ -39,8 +39,18 @@ async function initDatabase() {
         refresh_token TEXT,
         token_expires_at BIGINT,
         bot_enabled INTEGER DEFAULT 1,
+        game_enabled INTEGER DEFAULT 1,
         created_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())
       );
+
+      -- Migration: Add game_enabled column if not exists
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name = 'channels' AND column_name = 'game_enabled') THEN
+          ALTER TABLE channels ADD COLUMN game_enabled INTEGER DEFAULT 1;
+        END IF;
+      END $$;
 
       -- Per-channel command settings
       CREATE TABLE IF NOT EXISTS channel_commands (
