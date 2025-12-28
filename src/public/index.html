@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DoxiRPG Admin - Multi-Tenant Bot</title>
+  <title>DoxiBot - Yayıncı Paneli</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -13,15 +13,14 @@
   <div class="app">
     <aside class="sidebar">
       <div class="logo">
-        <span class="logo-icon">🎮</span>
-        <span class="logo-text">DoxiRPG</span>
+        <span class="logo-icon">🤖</span>
+        <span class="logo-text">DoxiBot</span>
       </div>
 
-      <!-- Channel Selector (Super Admin sees all) -->
-      <div class="channel-selector">
+      <!-- Channel Selector (Super Admin only) -->
+      <div class="channel-selector super-admin-only" id="channel-selector" style="display: none;">
         <label>Kanal:</label>
         <select id="channel-select" class="input" onchange="switchChannel()">
-          <option value="">Seçin...</option>
         </select>
       </div>
 

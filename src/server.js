@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { config } from './config.js';
 import { db } from './db/database.js';
@@ -11,19 +12,118 @@ import { getAllMonsters } from './data/monsters.js';
 import { getAllItems, rarityColors } from './data/items.js';
 import { getAllQuests } from './data/quests.js';
 
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 
+// Super Admin username (only this user can manage all channels)
+const SUPER_ADMIN = (process.env.SUPER_ADMIN || 'doxish').toLowerCase();
+
+// Simple in-memory session store (for production, use Redis or DB)
+const sessions = new Map();
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Session middleware
+app.use((req, res, next) => {
+    const sessionId = req.headers['x-session-id'] || req.query.session;
+    if (sessionId && sessions.has(sessionId)) {
+        req.session = sessions.get(sessionId);
+    } else {
+        req.session = null;
+    }
+    next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Trust proxy for Railway
 app.set('trust proxy', 1);
 
-// ========== AUTH ROUTES ==========
-app.get('/login', (req, res) => res.redirect(getAuthorizationUrl()));
+// ========== NEW AUTH ROUTES ==========
+
+// Serve login page
+app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
+
+// Login API
+app.post('/api/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({ success: false, error: 'Kullanıcı adı ve şifre gerekli!' });
+        }
+
+        const channel = await db.getChannelByUsername(username.toLowerCase());
+        if (!channel) {
+            return res.status(401).json({ success: false, error: 'Kanal bulunamadı!' });
+        }
+
+        // Check password
+        const passwordHash = crypto.createHash('sha256').update(password).digest('hex');
+
+        // If no password set, super admin can set it
+        if (!channel.password_hash) {
+            // First login - set password for this channel
+            await db.setChannelPassword(channel.channel_id, passwordHash);
+            console.log(`[Auth] Password set for channel: ${username}`);
+        } else if (channel.password_hash !== passwordHash) {
+            return res.status(401).json({ success: false, error: 'Yanlış şifre!' });
+        }
+
+        // Create session
+        const sessionId = crypto.randomBytes(32).toString('hex');
+        sessions.set(sessionId, {
+            username: channel.owner_username.toLowerCase(),
+            channelId: String(channel.channel_id),
+            isSuperAdmin: channel.owner_username.toLowerCase() === SUPER_ADMIN
+        });
+
+        console.log(`[Auth] Login successful: ${username}, session: ${sessionId.substring(0, 8)}...`);
+        res.json({ success: true, sessionId, username: channel.owner_username.toLowerCase() });
+    } catch (error) {
+        console.error('[Auth] Login error:', error);
+        res.status(500).json({ success: false, error: 'Giriş hatası!' });
+    }
+});
+
+// Logout API
+app.post('/api/logout', (req, res) => {
+    const sessionId = req.headers['x-session-id'];
+    if (sessionId) sessions.delete(sessionId);
+    res.json({ success: true });
+});
+
+// Session check API
+app.get('/api/session', (req, res) => {
+    if (req.session) {
+        res.json({
+            loggedIn: true,
+            username: req.session.username,
+            channelId: req.session.channelId,
+            isSuperAdmin: req.session.isSuperAdmin
+        });
+    } else {
+        res.json({ loggedIn: false });
+    }
+});
+
+// Channel dashboard route
+app.get('/x/:slug', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Super admin view route
+app.get('/adminview/x/:slug', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Redirect root to login
+app.get('/', (req, res) => {
+    res.redirect('/login');
+});
+
+// ========== KICK OAUTH ROUTES ==========
+app.get('/kick-login', (req, res) => res.redirect(getAuthorizationUrl()));
 
 app.get('/auth/kick/callback', async (req, res) => {
     try {

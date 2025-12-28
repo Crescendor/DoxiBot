@@ -1,32 +1,142 @@
-// DoxiRPG Multi-Tenant Dashboard
+// DoxiBot Dashboard
 
 let currentPage = 'dashboard';
 let currentChannelId = null;
+let currentChannelSlug = null;
 let channels = [];
+let sessionId = localStorage.getItem('sessionId');
+let isSuperAdmin = false;
+let loggedInUsername = null;
 
-document.addEventListener('DOMContentLoaded', () => {
-  initNavigation();
-  loadStatus();
-  updateSetupUrls();
+document.addEventListener('DOMContentLoaded', async () => {
+  // Detect channel from URL
+  const path = window.location.pathname;
+  const slugMatch = path.match(/^\/(x|adminview\/x)\/([^/]+)/);
 
-  // Check URL params
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('success')) {
-    const channelId = params.get('channel');
-    const username = params.get('username');
-    showNotification(`✅ ${username || 'Kanal'} aktifleştirildi!`, 'success');
-    if (channelId) currentChannelId = channelId;
-    window.history.replaceState({}, '', '/');
+  if (slugMatch) {
+    currentChannelSlug = slugMatch[2].toLowerCase();
+    const isAdminView = slugMatch[1] === 'adminview/x';
+
+    // Verify session
+    const session = await checkSession();
+    if (!session.loggedIn) {
+      window.location.href = '/login';
+      return;
+    }
+
+    loggedInUsername = session.username;
+    isSuperAdmin = session.isSuperAdmin;
+
+    // If admin view, only super admin can access
+    if (isAdminView && !isSuperAdmin) {
+      window.location.href = `/x/${loggedInUsername}`;
+      return;
+    }
+
+    // Load channel info
+    await loadChannelBySlug(currentChannelSlug);
+
+    // Setup UI visibility based on role
+    setupUIVisibility();
+
+    initNavigation();
+    updateSetupUrls();
+    navigateTo('dashboard');
+    setInterval(() => loadDashboard(), 60000);
+  } else if (path === '/' || path === '/index.html') {
+    // Redirect to login
+    window.location.href = '/login';
+    return;
+  }
+});
+
+async function checkSession() {
+  if (!sessionId) return { loggedIn: false };
+  try {
+    const res = await fetch('/api/session', {
+      headers: { 'X-Session-Id': sessionId }
+    });
+    return await res.json();
+  } catch (e) {
+    return { loggedIn: false };
+  }
+}
+
+async function loadChannelBySlug(slug) {
+  try {
+    const res = await fetch('/api/status');
+    const data = await res.json();
+    channels = data.channels || [];
+
+    const channel = channels.find(c => c.username.toLowerCase() === slug.toLowerCase());
+    if (channel) {
+      currentChannelId = String(channel.id);
+      document.getElementById('current-channel').textContent = `📺 ${channel.username}`;
+    } else {
+      showNotification('Kanal bulunamadı!', 'error');
+    }
+  } catch (e) {
+    console.error('Channel load error:', e);
+  }
+}
+
+function setupUIVisibility() {
+  // Show/hide super admin elements
+  const superAdminElements = document.querySelectorAll('.super-admin-only');
+  const channelSelector = document.getElementById('channel-selector');
+
+  if (isSuperAdmin) {
+    superAdminElements.forEach(el => el.style.display = '');
+    if (channelSelector) channelSelector.style.display = '';
+    populateChannelSelector();
+  } else {
+    superAdminElements.forEach(el => el.style.display = 'none');
+    if (channelSelector) channelSelector.style.display = 'none';
   }
 
-  setInterval(loadStatus, 30000);
-});
+  // Update title
+  document.title = `DoxiBot - ${currentChannelSlug}`;
+}
+
+async function populateChannelSelector() {
+  const select = document.getElementById('channel-select');
+  if (!select) return;
+
+  select.innerHTML = channels.map(c =>
+    `<option value="${c.username.toLowerCase()}" ${c.username.toLowerCase() === currentChannelSlug ? 'selected' : ''}>${c.username}</option>`
+  ).join('');
+}
+
+function switchChannel() {
+  const select = document.getElementById('channel-select');
+  const newSlug = select.value;
+  if (newSlug && newSlug !== currentChannelSlug) {
+    window.location.href = `/adminview/x/${newSlug}`;
+  }
+}
+
+async function logout() {
+  try {
+    await fetch('/api/logout', {
+      method: 'POST',
+      headers: { 'X-Session-Id': sessionId }
+    });
+  } catch (e) { }
+  localStorage.removeItem('sessionId');
+  window.location.href = '/login';
+}
 
 function initNavigation() {
   document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', (e) => { e.preventDefault(); navigateTo(item.dataset.page); });
   });
-  document.getElementById('login-btn').addEventListener('click', () => window.location.href = '/login');
+
+  // Update login button to logout
+  const loginBtn = document.getElementById('login-btn');
+  if (loginBtn) {
+    loginBtn.textContent = '🚪 Çıkış';
+    loginBtn.onclick = logout;
+  }
 }
 
 function navigateTo(page) {

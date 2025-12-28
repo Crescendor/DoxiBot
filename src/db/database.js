@@ -35,6 +35,7 @@ async function initDatabase() {
       CREATE TABLE IF NOT EXISTS channels (
         channel_id BIGINT PRIMARY KEY,
         owner_username TEXT NOT NULL,
+        password_hash TEXT,
         access_token TEXT,
         refresh_token TEXT,
         token_expires_at BIGINT,
@@ -49,6 +50,15 @@ async function initDatabase() {
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
                        WHERE table_name = 'channels' AND column_name = 'game_enabled') THEN
           ALTER TABLE channels ADD COLUMN game_enabled INTEGER DEFAULT 1;
+        END IF;
+      END $$;
+
+      -- Migration: Add password_hash column if not exists
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name = 'channels' AND column_name = 'password_hash') THEN
+          ALTER TABLE channels ADD COLUMN password_hash TEXT;
         END IF;
       END $$;
 
@@ -622,5 +632,17 @@ export const db = {
     },
     async deleteSuggestion(suggestionId) {
         await pool.query('DELETE FROM suggestions WHERE id = $1', [suggestionId]);
+    },
+
+    // ========== AUTHENTICATION ==========
+    async getChannelByUsername(username) {
+        return queryOne('SELECT * FROM channels WHERE LOWER(owner_username) = LOWER($1)', [username]);
+    },
+    async setChannelPassword(channelId, passwordHash) {
+        await pool.query('UPDATE channels SET password_hash = $1 WHERE channel_id = $2', [passwordHash, channelId]);
+    },
+    async getChannelPassword(channelId) {
+        const row = await queryOne('SELECT password_hash FROM channels WHERE channel_id = $1', [channelId]);
+        return row?.password_hash || null;
     }
 };
