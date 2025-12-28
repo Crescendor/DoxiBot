@@ -342,12 +342,13 @@ app.get('/api/admin/channel/:id/custom-commands', async (req, res) => {
 app.post('/api/admin/channel/:id/custom-command', async (req, res) => {
     try {
         const channelId = parseInt(req.params.id);
-        const { command, response, sub_response, reply_to_user, enabled } = req.body;
+        const { command, response, sub_response, user_responses, reply_to_user, enabled } = req.body;
         if (!command || !response) return res.status(400).json({ error: 'Komut ve cevap gerekli' });
 
         await db.upsertCustomCommand(channelId, command, {
             response,
             sub_response: sub_response || null,
+            user_responses: user_responses || null,
             reply_to_user: reply_to_user !== false,
             enabled: enabled !== false
         });
