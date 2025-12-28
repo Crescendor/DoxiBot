@@ -293,7 +293,10 @@ async function loadCommands() {
     document.getElementById('commands-list').innerHTML = commands.map(cmd => `
       <div class="command-editor-item ${cmd.enabled ? '' : 'disabled'}">
         <div class="command-header">
-          <div class="command-name">!${cmd.command}</div>
+          <div class="command-name-edit">
+            <span class="cmd-prefix">!</span>
+            <input type="text" class="input cmd-name-input" data-original="${cmd.command}" value="${esc(cmd.command)}" style="width: 120px; display: inline-block;">
+          </div>
           <label class="toggle-switch">
             <input type="checkbox" ${cmd.enabled ? 'checked' : ''} onchange="toggleCommand('${cmd.command}', this.checked)">
             <span class="toggle-slider"></span>
@@ -301,7 +304,7 @@ async function loadCommands() {
         </div>
         <div class="command-description">${cmd.description || 'Açıklama yok'}</div>
         <textarea class="input command-response" data-cmd="${cmd.command}" placeholder="Yanıt şablonu...">${esc(cmd.response || '')}</textarea>
-        <button class="btn btn-small" onclick="saveCommandResponse('${cmd.command}')">💾 Kaydet</button>
+        <button class="btn btn-small" onclick="saveCommand('${cmd.command}')">💾 Kaydet</button>
       </div>
     `).join('');
   } catch (e) {
@@ -328,6 +331,29 @@ async function saveCommandResponse(command) {
     body: JSON.stringify({ response })
   });
   showNotification('✅ Kaydedildi!', 'success');
+}
+
+async function saveCommand(originalCommand) {
+  if (!currentChannelId) return;
+
+  const nameInput = document.querySelector(`.cmd-name-input[data-original="${originalCommand}"]`);
+  const responseTextarea = document.querySelector(`.command-response[data-cmd="${originalCommand}"]`);
+
+  const newCommand = nameInput ? nameInput.value.trim().toLowerCase() : originalCommand;
+  const response = responseTextarea ? responseTextarea.value : '';
+
+  const res = await fetch(`/api/admin/channel/${currentChannelId}/command/${originalCommand}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command: newCommand, response })
+  });
+
+  if (res.ok) {
+    showNotification('✅ Kaydedildi!', 'success');
+    loadCommands();
+  } else {
+    showNotification('❌ Kayıt hatası!', 'error');
+  }
 }
 
 // ========== PLAYERS ==========

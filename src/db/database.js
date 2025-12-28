@@ -443,11 +443,20 @@ export const db = {
         );
     },
 
-    async updateCommandResponse(channelId, command, response) {
-        await pool.query(
-            'UPDATE channel_commands SET response = $1 WHERE channel_id = $2 AND command = $3',
-            [response, channelId, command]
-        );
+    async updateCommandResponse(channelId, originalCommand, response, newCommand = null) {
+        if (newCommand && newCommand !== originalCommand) {
+            // Update both command name and response
+            await pool.query(
+                'UPDATE channel_commands SET command = $1, response = $2 WHERE channel_id = $3 AND command = $4',
+                [newCommand, response, channelId, originalCommand]
+            );
+        } else {
+            // Update only response
+            await pool.query(
+                'UPDATE channel_commands SET response = $1 WHERE channel_id = $2 AND command = $3',
+                [response, channelId, originalCommand]
+            );
+        }
     },
 
     async updateChannelTokens(channelId, accessToken, refreshToken, expiresIn) {
