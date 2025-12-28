@@ -189,7 +189,7 @@ app.get('/api/status', async (req, res) => {
 
 app.get('/api/channel/:id/status', async (req, res) => {
     try {
-        const channelId = parseInt(req.params.id);
+        const channelId = req.params.id;
         const channel = await db.getChannel(channelId);
         if (!channel) return res.status(404).json({ error: 'Channel not found' });
 
@@ -200,13 +200,13 @@ app.get('/api/channel/:id/status', async (req, res) => {
 
 app.get('/api/channel/:id/leaderboard', async (req, res) => {
     try {
-        res.json(await db.getLeaderboard(parseInt(req.params.id), 10));
+        res.json(await db.getLeaderboard(req.params.id, 10));
     } catch (e) { res.json([]); }
 });
 
 app.get('/api/channel/:id/chat-log', async (req, res) => {
     try {
-        res.json(await db.getRecentChats(parseInt(req.params.id), 50));
+        res.json(await db.getRecentChats(req.params.id, 50));
     } catch (e) { res.json([]); }
 });
 
@@ -218,26 +218,26 @@ app.get('/api/admin/channels', async (req, res) => {
 
 app.delete('/api/admin/channel/:id', async (req, res) => {
     try {
-        await db.deleteChannel(parseInt(req.params.id));
+        await db.deleteChannel(req.params.id);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/admin/channel/:id/toggle', async (req, res) => {
     try {
-        await db.toggleChannel(parseInt(req.params.id), req.body.enabled);
+        await db.toggleChannel(req.params.id, req.body.enabled);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/admin/channel/:id/commands', async (req, res) => {
-    try { res.json(await db.getChannelCommands(parseInt(req.params.id))); }
+    try { res.json(await db.getChannelCommands(req.params.id)); }
     catch (e) { res.json([]); }
 });
 
 app.put('/api/admin/channel/:id/command/:cmd', async (req, res) => {
     try {
-        const channelId = parseInt(req.params.id);
+        const channelId = req.params.id;
         const { enabled, response, description } = req.body;
         const existing = await db.getChannelCommand(channelId, req.params.cmd);
 
@@ -310,14 +310,14 @@ app.get('/api/admin/quests', (req, res) => {
 
 app.post('/api/admin/channel/:id/monster/:monsterId/drops', async (req, res) => {
     try {
-        await db.saveMonsterDropOverride(parseInt(req.params.id), req.params.monsterId, req.body.drops);
+        await db.saveMonsterDropOverride(req.params.id, req.params.monsterId, req.body.drops);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/admin/channel/:id/send-message', async (req, res) => {
     try {
-        const channelId = parseInt(req.params.id);
+        const channelId = req.params.id;
         const channel = await db.getChannel(channelId);
         if (!channel) return res.status(404).json({ error: 'Channel not found' });
 
@@ -337,13 +337,13 @@ app.post('/api/test-command', async (req, res) => {
 
 // ========== CUSTOM COMMANDS API ==========
 app.get('/api/admin/channel/:id/custom-commands', async (req, res) => {
-    try { res.json(await db.getCustomCommands(parseInt(req.params.id))); }
+    try { res.json(await db.getCustomCommands(req.params.id)); }
     catch (e) { res.json([]); }
 });
 
 app.post('/api/admin/channel/:id/custom-command', async (req, res) => {
     try {
-        const channelId = parseInt(req.params.id);
+        const channelId = req.params.id;
         const { command, response, sub_response, user_responses, reply_to_user, enabled } = req.body;
         if (!command || !response) return res.status(400).json({ error: 'Komut ve cevap gerekli' });
 
@@ -360,20 +360,20 @@ app.post('/api/admin/channel/:id/custom-command', async (req, res) => {
 
 app.delete('/api/admin/channel/:id/custom-command/:cmd', async (req, res) => {
     try {
-        await db.deleteCustomCommand(parseInt(req.params.id), req.params.cmd);
+        await db.deleteCustomCommand(req.params.id, req.params.cmd);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ========== POOLS API ==========
 app.get('/api/admin/channel/:id/pools', async (req, res) => {
-    try { res.json(await db.getPools(parseInt(req.params.id))); }
+    try { res.json(await db.getPools(req.params.id)); }
     catch (e) { res.json([]); }
 });
 
 app.post('/api/admin/channel/:id/pool', async (req, res) => {
     try {
-        const channelId = parseInt(req.params.id);
+        const channelId = req.params.id;
         const { pool_name, values } = req.body;
         if (!pool_name || !values) return res.status(400).json({ error: 'Havuz adı ve değerler gerekli' });
 
@@ -384,7 +384,7 @@ app.post('/api/admin/channel/:id/pool', async (req, res) => {
 
 app.delete('/api/admin/channel/:id/pool/:name', async (req, res) => {
     try {
-        await db.deletePool(parseInt(req.params.id), req.params.name);
+        await db.deletePool(req.params.id, req.params.name);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -392,14 +392,14 @@ app.delete('/api/admin/channel/:id/pool/:name', async (req, res) => {
 // ========== GAME TOGGLE ==========
 app.get('/api/admin/channel/:id/game-status', async (req, res) => {
     try {
-        const enabled = await db.getGameEnabled(parseInt(req.params.id));
+        const enabled = await db.getGameEnabled(req.params.id);
         res.json({ game_enabled: enabled });
     } catch (e) { res.json({ game_enabled: true }); }
 });
 
 app.post('/api/admin/channel/:id/game-toggle', async (req, res) => {
     try {
-        await db.setGameEnabled(parseInt(req.params.id), req.body.enabled);
+        await db.setGameEnabled(req.params.id, req.body.enabled);
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -407,7 +407,7 @@ app.post('/api/admin/channel/:id/game-toggle', async (req, res) => {
 // ========== SUGGESTIONS API ==========
 app.get('/api/admin/channel/:id/suggestions', async (req, res) => {
     try {
-        const channelId = parseInt(req.params.id);
+        const channelId = req.params.id;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
 
