@@ -528,6 +528,9 @@ app.delete('/api/admin/channel/:id/suggestion/:suggestionId', async (req, res) =
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Health check for Railway (must be before catch-all)
+app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
+
 // Channel dashboard route (catch-all, must be LAST)
 app.get('/:slug', (req, res) => {
     // Don't catch known paths
@@ -537,8 +540,5 @@ app.get('/:slug', (req, res) => {
     }
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-
-// Health check for Railway
-app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
 
 export { app };
