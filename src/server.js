@@ -524,6 +524,91 @@ app.post('/api/admin/channel/:id/game-toggle', async (req, res) => {
     }
 });
 
+// ========== GAME DATA API ==========
+app.get('/api/admin/game/items', async (req, res) => {
+    try {
+        const items = await db.getAllGameItems();
+        res.json(items);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/admin/game/item/:id', async (req, res) => {
+    try {
+        await db.saveGameItem({ ...req.body, id: req.params.id });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/admin/game/item', async (req, res) => {
+    try {
+        await db.saveGameItem(req.body);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/admin/game/item/:id', async (req, res) => {
+    try {
+        await db.deleteGameItem(req.params.id);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/admin/game/monsters', async (req, res) => {
+    try {
+        const monsters = await db.getAllGameMonsters();
+        res.json(monsters);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/admin/game/monster/:id', async (req, res) => {
+    try {
+        await db.saveGameMonster({ ...req.body, id: req.params.id });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/admin/game/monster', async (req, res) => {
+    try {
+        await db.saveGameMonster(req.body);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/admin/game/monster/:id', async (req, res) => {
+    try {
+        await db.deleteGameMonster(req.params.id);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/admin/game/quests', async (req, res) => {
+    try {
+        const quests = await db.getAllGameQuests();
+        res.json(quests);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/admin/game/quest/:id', async (req, res) => {
+    try {
+        await db.saveGameQuest({ ...req.body, id: req.params.id });
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/admin/game/quest', async (req, res) => {
+    try {
+        await db.saveGameQuest(req.body);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/admin/game/quest/:id', async (req, res) => {
+    try {
+        await db.deleteGameQuest(req.params.id);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ========== SUGGESTIONS API ==========
 app.get('/api/admin/channel/:id/suggestions', async (req, res) => {
     try {

@@ -252,6 +252,46 @@ async function initDatabase() {
           ALTER TABLE channels ADD COLUMN game_enabled INTEGER DEFAULT 1;
         END IF;
       END $$;
+
+      -- Game Items Table
+      CREATE TABLE IF NOT EXISTS game_items (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        emoji TEXT DEFAULT '📦',
+        type TEXT DEFAULT 'material',
+        rarity TEXT DEFAULT 'common',
+        description TEXT,
+        price INTEGER DEFAULT 0,
+        gem_price INTEGER DEFAULT 0,
+        shop_item BOOLEAN DEFAULT FALSE,
+        premium_shop BOOLEAN DEFAULT FALSE,
+        attack INTEGER DEFAULT 0,
+        defense INTEGER DEFAULT 0,
+        hp INTEGER DEFAULT 0
+      );
+
+      -- Game Monsters Table
+      CREATE TABLE IF NOT EXISTS game_monsters (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        emoji TEXT DEFAULT '👹',
+        hp INTEGER DEFAULT 100,
+        atk INTEGER DEFAULT 10,
+        def INTEGER DEFAULT 5,
+        min_level INTEGER DEFAULT 1,
+        exp_reward INTEGER DEFAULT 50,
+        gold_reward INTEGER DEFAULT 100
+      );
+
+      -- Game Quests Table
+      CREATE TABLE IF NOT EXISTS game_quests (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        gold_reward INTEGER DEFAULT 100,
+        exp_reward INTEGER DEFAULT 50,
+        min_level INTEGER DEFAULT 1
+      );
     `);
         console.log('✅ PostgreSQL veritabanı başlatıldı');
     } finally {
@@ -679,7 +719,6 @@ export const db = {
         await pool.query('DELETE FROM suggestions WHERE id = $1', [suggestionId]);
     },
 
-    // ========== AUTHENTICATION ==========
     async getChannelByUsername(username) {
         return queryOne('SELECT * FROM channels WHERE LOWER(owner_username) = LOWER($1)', [username]);
     },
@@ -689,5 +728,66 @@ export const db = {
     async getChannelPassword(channelId) {
         const row = await queryOne('SELECT password_hash FROM channels WHERE channel_id = $1', [channelId]);
         return row?.password_hash || null;
+    },
+
+    // ========== GAME ITEMS ==========
+    async getAllGameItems() {
+        const result = await pool.query('SELECT * FROM game_items ORDER BY name');
+        return result.rows;
+    },
+    async saveGameItem(item) {
+        await pool.query(
+            `INSERT INTO game_items (id, name, emoji, type, rarity, description, price, gem_price, shop_item, premium_shop, attack, defense, hp)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+             ON CONFLICT (id) DO UPDATE SET
+             name = $2, emoji = $3, type = $4, rarity = $5, description = $6,
+             price = $7, gem_price = $8, shop_item = $9, premium_shop = $10,
+             attack = $11, defense = $12, hp = $13`,
+            [item.id, item.name, item.emoji || '📦', item.type || 'material', item.rarity || 'common',
+            item.description || '', item.price || 0, item.gem_price || 0,
+            item.shop_item || false, item.premium_shop || false,
+            item.attack || 0, item.defense || 0, item.hp || 0]
+        );
+    },
+    async deleteGameItem(id) {
+        await pool.query('DELETE FROM game_items WHERE id = $1', [id]);
+    },
+
+    // ========== GAME MONSTERS ==========
+    async getAllGameMonsters() {
+        const result = await pool.query('SELECT * FROM game_monsters ORDER BY min_level, name');
+        return result.rows;
+    },
+    async saveGameMonster(m) {
+        await pool.query(
+            `INSERT INTO game_monsters (id, name, emoji, hp, atk, def, min_level, exp_reward, gold_reward)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+             ON CONFLICT (id) DO UPDATE SET
+             name = $2, emoji = $3, hp = $4, atk = $5, def = $6,
+             min_level = $7, exp_reward = $8, gold_reward = $9`,
+            [m.id, m.name, m.emoji || '👹', m.hp || 100, m.atk || 10, m.def || 5,
+            m.min_level || 1, m.exp_reward || 50, m.gold_reward || 100]
+        );
+    },
+    async deleteGameMonster(id) {
+        await pool.query('DELETE FROM game_monsters WHERE id = $1', [id]);
+    },
+
+    // ========== GAME QUESTS ==========
+    async getAllGameQuests() {
+        const result = await pool.query('SELECT * FROM game_quests ORDER BY min_level, name');
+        return result.rows;
+    },
+    async saveGameQuest(q) {
+        await pool.query(
+            `INSERT INTO game_quests (id, name, description, gold_reward, exp_reward, min_level)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (id) DO UPDATE SET
+             name = $2, description = $3, gold_reward = $4, exp_reward = $5, min_level = $6`,
+            [q.id, q.name, q.description || '', q.gold_reward || 100, q.exp_reward || 50, q.min_level || 1]
+        );
+    },
+    async deleteGameQuest(id) {
+        await pool.query('DELETE FROM game_quests WHERE id = $1', [id]);
     }
 };

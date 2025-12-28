@@ -672,18 +672,23 @@ async function saveItem(itemId) {
     defense: parseInt(document.getElementById('edit-item-defense').value) || 0,
     hp: parseInt(document.getElementById('edit-item-hp').value) || 0,
     price: parseInt(document.getElementById('edit-item-price').value) || 0,
-    gemPrice: parseInt(document.getElementById('edit-item-gem').value) || 0,
+    gem_price: parseInt(document.getElementById('edit-item-gem').value) || 0,
     description: document.getElementById('edit-item-desc').value,
-    shopItem: document.getElementById('edit-item-shop').checked,
-    premiumShop: document.getElementById('edit-item-pshop').checked
+    shop_item: document.getElementById('edit-item-shop').checked,
+    premium_shop: document.getElementById('edit-item-pshop').checked
   };
 
-  await fetch(`/api/admin/channel/${currentChannelId}/item/${itemId}`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+  const res = await fetch('/api/admin/game/item/' + itemId, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(itemData)
   });
 
-  closeModal(); loadItems(); showNotification('✅ Kaydedildi!', 'success');
+  if (res.ok) {
+    closeModal(); loadItems(); showNotification('✅ Kaydedildi!', 'success');
+  } else {
+    showNotification('❌ Kayıt hatası!', 'error');
+  }
 }
 
 function openAddItemModal() {
@@ -712,9 +717,16 @@ function openAddItemModal() {
 }
 
 async function addNewItem() {
+  const id = document.getElementById('new-item-id').value;
+  const name = document.getElementById('new-item-name').value;
+  if (!id || !name) {
+    showNotification('ID ve isim zorunlu!', 'error');
+    return;
+  }
+
   const itemData = {
-    id: document.getElementById('new-item-id').value,
-    name: document.getElementById('new-item-name').value,
+    id: id,
+    name: name,
     emoji: document.getElementById('new-item-emoji').value,
     type: document.getElementById('new-item-type').value,
     price: parseInt(document.getElementById('new-item-price').value) || 0,
@@ -722,12 +734,17 @@ async function addNewItem() {
     rarity: 'common'
   };
 
-  await fetch(`/api/admin/channel/${currentChannelId}/item/${itemData.id}`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+  const res = await fetch('/api/admin/game/item', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(itemData)
   });
 
-  closeModal(); loadItems(); showNotification('✅ Eklendi!', 'success');
+  if (res.ok) {
+    closeModal(); loadItems(); showNotification('✅ Eklendi!', 'success');
+  } else {
+    showNotification('❌ Ekleme hatası!', 'error');
+  }
 }
 
 // ========== QUESTS ==========
