@@ -534,9 +534,13 @@ app.get('/api/admin/game/items', async (req, res) => {
 
 app.put('/api/admin/game/item/:id', async (req, res) => {
     try {
+        console.log('[API] PUT game/item:', req.params.id, req.body);
         await db.saveGameItem({ ...req.body, id: req.params.id });
         res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) {
+        console.error('[API] saveGameItem error:', e);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 app.post('/api/admin/game/item', async (req, res) => {
