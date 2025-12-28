@@ -13,13 +13,33 @@ function generateCodeChallenge(verifier) {
     return crypto.createHash('sha256').update(verifier).digest('base64url');
 }
 
-// Store verifier temporarily (in production, use session/redis)
-let codeVerifier = generateCodeVerifier();
+// Store verifiers per state (supports multiple concurrent logins)
+const pendingAuth = new Map();
+
+// Clean up old entries (older than 10 minutes)
+function cleanupPendingAuth() {
+    const now = Date.now();
+    for (const [state, data] of pendingAuth.entries()) {
+        if (now - data.createdAt > 10 * 60 * 1000) {
+            pendingAuth.delete(state);
+        }
+    }
+}
 
 export function getAuthorizationUrl() {
-    codeVerifier = generateCodeVerifier();
-    const codeChallenge = generateCodeChallenge(codeVerifier);
+    cleanupPendingAuth();
+
     const state = crypto.randomBytes(16).toString('hex');
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = generateCodeChallenge(codeVerifier);
+
+    // Store verifier by state
+    pendingAuth.set(state, {
+        verifier: codeVerifier,
+        createdAt: Date.now()
+    });
+
+    console.log(`[OAuth] Created auth request with state: ${state.substring(0, 8)}...`);
 
     const params = new URLSearchParams({
         client_id: config.kickClientId,
@@ -34,7 +54,18 @@ export function getAuthorizationUrl() {
     return `${KICK_AUTH_URL}?${params.toString()}`;
 }
 
-export async function exchangeCodeForTokens(code) {
+export async function exchangeCodeForTokens(code, state) {
+    // Get verifier for this state
+    const authData = pendingAuth.get(state);
+    if (!authData) {
+        throw new Error('Invalid or expired state - please try logging in again');
+    }
+
+    const codeVerifier = authData.verifier;
+    pendingAuth.delete(state); // Clean up after use
+
+    console.log(`[OAuth] Exchanging code for state: ${state?.substring(0, 8)}...`);
+
     const response = await fetch(KICK_TOKEN_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

@@ -25,11 +25,12 @@ app.get('/login', (req, res) => res.redirect(getAuthorizationUrl()));
 
 app.get('/auth/kick/callback', async (req, res) => {
     try {
-        const { code, error } = req.query;
+        const { code, error, state } = req.query;
         if (error) return res.send(`<html><body><h1>Hata</h1><p>${error}</p><a href="/">Geri</a></body></html>`);
         if (!code) return res.send('<html><body><h1>Hata</h1><p>Kod yok</p><a href="/">Geri</a></body></html>');
+        if (!state) return res.send('<html><body><h1>Hata</h1><p>State yok - tekrar deneyin</p><a href="/">Geri</a></body></html>');
 
-        const tokens = await exchangeCodeForTokens(code);
+        const tokens = await exchangeCodeForTokens(code, state);
         console.log('Tokens received:', { access_token: tokens.access_token?.substring(0, 20) + '...', expires_in: tokens.expires_in });
 
         let userInfo = null;
