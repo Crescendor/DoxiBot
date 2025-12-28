@@ -218,15 +218,7 @@ async function loadStatus() {
   } catch (e) { console.error('Status error:', e); }
 }
 
-function switchChannel() {
-  const select = document.getElementById('channel-select');
-  currentChannelId = select.value || null;
-  const ch = channels.find(c => String(c.id) === String(currentChannelId));
-  document.getElementById('current-channel').textContent = ch ? `📺 ${ch.username}` : '';
-
-  // Reload current page data
-  navigateTo(currentPage);
-}
+// Old switchChannel removed - using the new one at line 127 that does proper URL redirect
 
 async function loadDashboard() {
   if (!currentChannelId) {
