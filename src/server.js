@@ -556,13 +556,18 @@ app.delete('/api/admin/channel/:id/suggestion/:suggestionId', async (req, res) =
 // Health check for Railway (must be before catch-all)
 app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
 
-// Channel dashboard route (catch-all, must be LAST)
-app.get('/:slug', (req, res) => {
+// Channel dashboard with optional page route (e.g., /doxish/items)
+app.get('/:slug/:page?', (req, res) => {
     // Don't catch known paths
     const slug = req.params.slug.toLowerCase();
-    if (['login', 'health', 'webhook', 'kick-login'].includes(slug)) {
+    if (['login', 'health', 'webhook', 'kick-login', 'api', 'auth', 'adminview'].includes(slug)) {
         return res.status(404).send('Not found');
     }
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Adminview with optional page route (e.g., /adminview/zaontez/items)
+app.get('/adminview/:slug/:page?', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 

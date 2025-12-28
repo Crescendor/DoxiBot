@@ -9,23 +9,26 @@ let isSuperAdmin = false;
 let loggedInUsername = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Detect channel from URL
+  // Detect channel and page from URL
   const path = window.location.pathname;
 
-  // Check for /adminview/slug or /slug format
-  const adminMatch = path.match(/^\/adminview\/([^/]+)/);
-  const channelMatch = path.match(/^\/([^/]+)$/);
+  // Check for /adminview/slug/page? or /slug/page? format
+  const adminMatch = path.match(/^\/adminview\/([^/]+)(?:\/([^/]+))?/);
+  const channelMatch = path.match(/^\/([^/]+)(?:\/([^/]+))?$/);
 
   // Skip if it's a known system path
   const systemPaths = ['login', 'health', 'webhook', 'kick-login', 'api', 'auth'];
 
   let isAdminView = false;
+  let initialPage = 'dashboard';
 
   if (adminMatch) {
     currentChannelSlug = adminMatch[1].toLowerCase();
+    initialPage = adminMatch[2] || 'dashboard';
     isAdminView = true;
   } else if (channelMatch && !systemPaths.includes(channelMatch[1].toLowerCase())) {
     currentChannelSlug = channelMatch[1].toLowerCase();
+    initialPage = channelMatch[2] || 'dashboard';
   } else if (path === '/' || path === '/index.html') {
     window.location.href = '/login';
     return;
@@ -63,7 +66,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initNavigation();
   updateSetupUrls();
-  navigateTo('dashboard');
+
+  // Navigate to the page from URL (or default to dashboard)
+  navigateTo(initialPage, false); // false = don't push to history since we're loading from URL
+
+  // Handle browser back/forward buttons
+  window.addEventListener('popstate', (event) => {
+    if (event.state && event.state.page) {
+      navigateTo(event.state.page, false);
+    }
+  });
+
   setInterval(() => loadDashboard(), 60000);
 });
 
@@ -161,7 +174,7 @@ function initNavigation() {
   }
 }
 
-function navigateTo(page) {
+function navigateTo(page, pushHistory = true) {
   currentPage = page;
   document.querySelectorAll('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.page === page));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === `page-${page}`));
@@ -172,9 +185,18 @@ function navigateTo(page) {
     customcmds: '💬 Özel Komutlar', pools: '🎲 Havuzlar',
     items: '🎒 Eşyalar', monsters: '👹 Canavarlar', quests: '📋 Görevler',
     shop: '🏪 Dükkan', pshop: '💎 Premium Dükkan', settings: '⏱️ Oyun Ayarları',
-    channels: '📺 Tüm Kanallar', setup: '⚙️ Kurulum'
+    channels: '📺 Tüm Kanallar', setup: '⚙️ Kurulum', suggestions: '💡 Öneriler'
   };
   document.getElementById('page-title').textContent = titles[page] || page;
+
+  // Update URL with history.pushState
+  if (pushHistory && currentChannelSlug) {
+    const basePath = isSuperAdmin && loggedInUsername !== currentChannelSlug
+      ? `/adminview/${currentChannelSlug}`
+      : `/${currentChannelSlug}`;
+    const newUrl = page === 'dashboard' ? basePath : `${basePath}/${page}`;
+    history.pushState({ page }, titles[page] || page, newUrl);
+  }
 
   if (page === 'commands') loadCommands();
   if (page === 'players') loadPlayers();
