@@ -431,11 +431,15 @@ async function loadChannels() {
     const channelsList = await res.json();
 
     document.getElementById('channels-list').innerHTML = channelsList.length > 0 ? `
-      <table><thead><tr><th>ID</th><th>Kullanıcı</th><th>Durum</th><th>Kayıt</th><th>İşlemler</th></tr></thead>
+      <table><thead><tr><th>ID</th><th>Kullanıcı</th><th>Şifre</th><th>Durum</th><th>Kayıt</th><th>İşlemler</th></tr></thead>
       <tbody>${channelsList.map(c => `
         <tr>
           <td>${c.channel_id}</td>
           <td>${esc(c.owner_username)}</td>
+          <td>
+            <span class="password-field" id="pwd-${c.channel_id}">${c.password_hash ? '••••••••' : '<em>Şifre yok</em>'}</span>
+            ${c.password_hash ? `<button class="btn btn-small" onclick="togglePassword('${c.channel_id}', '${esc(c.password_hash)}')">👁️</button>` : ''}
+          </td>
           <td>${c.bot_enabled ? '✅ Aktif' : '❌ Kapalı'}</td>
           <td>${new Date(c.created_at * 1000).toLocaleDateString('tr-TR')}</td>
           <td class="actions">
@@ -447,6 +451,17 @@ async function loadChannels() {
       `).join('')}</tbody></table>
     ` : '<div class="empty-state">Kayıtlı kanal yok</div>';
   } catch (e) { console.error('Channels error:', e); }
+}
+
+function togglePassword(channelId, hash) {
+  const el = document.getElementById(`pwd-${channelId}`);
+  if (el.dataset.visible === 'true') {
+    el.textContent = '••••••••';
+    el.dataset.visible = 'false';
+  } else {
+    el.textContent = hash;
+    el.dataset.visible = 'true';
+  }
 }
 
 function selectChannel(channelId) {
