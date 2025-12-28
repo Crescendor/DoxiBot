@@ -524,6 +524,42 @@ app.post('/api/admin/channel/:id/game-toggle', async (req, res) => {
     }
 });
 
+// ========== COMMANDS API ==========
+app.get('/api/admin/channel/:id/commands', async (req, res) => {
+    try {
+        const channelId = req.params.id;
+        const commands = await db.getChannelCommands(channelId);
+        res.json(commands);
+    } catch (e) {
+        console.error('[API] getCommands error:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/admin/channel/:id/command/:cmd/toggle', async (req, res) => {
+    try {
+        const { id: channelId, cmd: command } = req.params;
+        const { enabled } = req.body;
+        await db.toggleCommand(channelId, command, enabled);
+        res.json({ success: true });
+    } catch (e) {
+        console.error('[API] toggleCommand error:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.put('/api/admin/channel/:id/command/:cmd', async (req, res) => {
+    try {
+        const { id: channelId, cmd: command } = req.params;
+        const { response } = req.body;
+        await db.updateCommandResponse(channelId, command, response);
+        res.json({ success: true });
+    } catch (e) {
+        console.error('[API] updateCommand error:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // ========== GAME DATA API (Per-Channel) ==========
 // Items
 app.get('/api/admin/channel/:channelId/game/items', async (req, res) => {

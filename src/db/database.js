@@ -427,6 +427,29 @@ export const db = {
         await pool.query('UPDATE channels SET bot_enabled = $1 WHERE channel_id = $2', [enabled ? 1 : 0, channelId]);
     },
 
+    // ========== COMMANDS ==========
+    async getChannelCommands(channelId) {
+        const result = await pool.query(
+            'SELECT command, description, enabled, response FROM channel_commands WHERE channel_id = $1 ORDER BY command',
+            [channelId]
+        );
+        return result.rows;
+    },
+
+    async toggleCommand(channelId, command, enabled) {
+        await pool.query(
+            'UPDATE channel_commands SET enabled = $1 WHERE channel_id = $2 AND command = $3',
+            [enabled ? 1 : 0, channelId, command]
+        );
+    },
+
+    async updateCommandResponse(channelId, command, response) {
+        await pool.query(
+            'UPDATE channel_commands SET response = $1 WHERE channel_id = $2 AND command = $3',
+            [response, channelId, command]
+        );
+    },
+
     async updateChannelTokens(channelId, accessToken, refreshToken, expiresIn) {
         const expiresAt = now() + expiresIn;
         console.log(`[DB] Updating tokens for channel ${channelId}`);
