@@ -249,8 +249,19 @@ app.post('/webhook', async (req, res) => {
                     const response = await processCommand(channelId, message);
                     if (response) {
                         console.log(`[Bot] Game response: ${response.substring(0, 50)}...`);
-                        await kickApi.sendMessageToChannel(channelId, channel.access_token, response, message.message_id);
-                        console.log('[Bot] Game response sent');
+                        try {
+                            await kickApi.sendMessageToChannel(channelId, channel.access_token, response, message.message_id);
+                            console.log('[Bot] Game response sent successfully');
+                        } catch (sendError) {
+                            console.error('[Bot] FAILED to send game response:', sendError.message);
+                            // Try without reply if failed
+                            try {
+                                await kickApi.sendMessageToChannel(channelId, channel.access_token, response, null);
+                                console.log('[Bot] Game response sent (without reply)');
+                            } catch (e2) {
+                                console.error('[Bot] FAILED to send even without reply:', e2.message);
+                            }
+                        }
                     }
                 } else {
                     console.log('[Bot] Game is disabled for this channel');

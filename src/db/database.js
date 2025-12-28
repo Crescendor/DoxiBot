@@ -620,8 +620,11 @@ export const db = {
         }
 
         // game_enabled is stored as INTEGER: 1 = enabled, 0 = disabled
-        const enabled = row.game_enabled === 1 || row.game_enabled === true;
-        console.log(`[DB] Channel ${cid} game_enabled = ${enabled}`);
+        // PostgreSQL may return as string or number, so convert to Number
+        const rawValue = row.game_enabled;
+        console.log(`[DB] Raw game_enabled value: ${rawValue}, type: ${typeof rawValue}`);
+        const enabled = Number(rawValue) === 1;
+        console.log(`[DB] Channel ${cid} game_enabled = ${enabled} (converted from ${rawValue})`);
         return enabled;
     },
 
