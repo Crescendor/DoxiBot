@@ -292,6 +292,29 @@ async function initDatabase() {
         exp_reward INTEGER DEFAULT 50,
         min_level INTEGER DEFAULT 1
       );
+
+      -- Migration: Add missing columns to game_items if they don't exist
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'game_items' AND column_name = 'gem_price') THEN
+          ALTER TABLE game_items ADD COLUMN gem_price INTEGER DEFAULT 0;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'game_items' AND column_name = 'shop_item') THEN
+          ALTER TABLE game_items ADD COLUMN shop_item BOOLEAN DEFAULT FALSE;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'game_items' AND column_name = 'premium_shop') THEN
+          ALTER TABLE game_items ADD COLUMN premium_shop BOOLEAN DEFAULT FALSE;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'game_items' AND column_name = 'attack') THEN
+          ALTER TABLE game_items ADD COLUMN attack INTEGER DEFAULT 0;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'game_items' AND column_name = 'defense') THEN
+          ALTER TABLE game_items ADD COLUMN defense INTEGER DEFAULT 0;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'game_items' AND column_name = 'hp') THEN
+          ALTER TABLE game_items ADD COLUMN hp INTEGER DEFAULT 0;
+        END IF;
+      END $$;
     `);
         console.log('✅ PostgreSQL veritabanı başlatıldı');
     } finally {
