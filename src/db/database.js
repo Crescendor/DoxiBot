@@ -974,19 +974,40 @@ export const db = {
 
     async saveSlotSettings(channelId, settings) {
         const cid = String(channelId);
-        await pool.query(
-            `INSERT INTO slot_settings (channel_id, enabled, game_name, coin_name, min_bet, max_bet, spin_count, start_balance, multipliers, icons, cmd_slot, cmd_balance, cmd_leaderboard, win_message, jackpot_message)
-             VALUES ($1::BIGINT, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-             ON CONFLICT (channel_id) DO UPDATE SET
-             enabled = $2, game_name = $3, coin_name = $4, min_bet = $5, max_bet = $6, spin_count = $7,
-             start_balance = $8, multipliers = $9, icons = $10, cmd_slot = $11, cmd_balance = $12, cmd_leaderboard = $13, win_message = $14, jackpot_message = $15`,
-            [cid, settings.enabled || 0, settings.game_name || 'Slot Makinesi', settings.coin_name || 'Coin',
-                settings.min_bet || 10, settings.max_bet || 100000000, settings.spin_count || 5,
-                settings.start_balance || 1000, JSON.stringify(settings.multipliers || {}),
-                JSON.stringify(settings.icons || ['🍒', '🍋', '🔔', '⭐', '💎', '7️⃣']),
-                settings.cmd_slot || 'slot', settings.cmd_balance || 'bakiye', settings.cmd_leaderboard || 'slotsiralama',
-                settings.win_message || '', settings.jackpot_message || '']
-        );
+        console.log('[DB] saveSlotSettings called for channel:', cid, 'settings:', JSON.stringify(settings).substring(0, 200));
+        try {
+            // Try with all columns first (new schema)
+            await pool.query(
+                `INSERT INTO slot_settings (channel_id, enabled, game_name, coin_name, min_bet, max_bet, spin_count, start_balance, multipliers, icons, cmd_slot, cmd_balance, cmd_leaderboard, win_message, jackpot_message)
+                 VALUES ($1::BIGINT, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                 ON CONFLICT (channel_id) DO UPDATE SET
+                 enabled = $2, game_name = $3, coin_name = $4, min_bet = $5, max_bet = $6, spin_count = $7,
+                 start_balance = $8, multipliers = $9, icons = $10, cmd_slot = $11, cmd_balance = $12, cmd_leaderboard = $13, win_message = $14, jackpot_message = $15`,
+                [cid, settings.enabled ?? 0, settings.game_name || 'Slot Makinesi', settings.coin_name || 'Coin',
+                    settings.min_bet || 10, settings.max_bet || 100000000, settings.spin_count || 5,
+                    settings.start_balance || 1000, JSON.stringify(settings.multipliers || {}),
+                    JSON.stringify(settings.icons || ['🍒', '🍋', '🔔', '⭐', '💎', '7️⃣']),
+                    settings.cmd_slot || 'slot', settings.cmd_balance || 'bakiye', settings.cmd_leaderboard || 'slotsiralama',
+                    settings.win_message || '', settings.jackpot_message || '']
+            );
+            console.log('[DB] saveSlotSettings SUCCESS (full schema)');
+        } catch (e) {
+            console.log('[DB] saveSlotSettings full schema failed, trying basic schema:', e.message);
+            // Fallback to basic columns (old schema)
+            await pool.query(
+                `INSERT INTO slot_settings (channel_id, enabled, game_name, min_bet, max_bet, spin_count, start_balance, multipliers, icons, win_message, jackpot_message)
+                 VALUES ($1::BIGINT, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                 ON CONFLICT (channel_id) DO UPDATE SET
+                 enabled = $2, game_name = $3, min_bet = $4, max_bet = $5, spin_count = $6,
+                 start_balance = $7, multipliers = $8, icons = $9, win_message = $10, jackpot_message = $11`,
+                [cid, settings.enabled ?? 0, settings.game_name || 'Slot Makinesi',
+                    settings.min_bet || 10, settings.max_bet || 100000000, settings.spin_count || 5,
+                    settings.start_balance || 1000, JSON.stringify(settings.multipliers || {}),
+                    JSON.stringify(settings.icons || ['🍒', '🍋', '🔔', '⭐', '💎', '7️⃣']),
+                    settings.win_message || '', settings.jackpot_message || '']
+            );
+            console.log('[DB] saveSlotSettings SUCCESS (basic schema)');
+        }
     },
 
     async toggleSlot(channelId, enabled) {
