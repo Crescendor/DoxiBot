@@ -329,9 +329,10 @@ app.post('/webhook', async (req, res) => {
                 console.log(`[Slot] Settings for ${channelId}:`, slotSettings ? { enabled: slotSettings.enabled, cmd_slot: slotSettings.cmd_slot } : 'null');
 
                 if (slotSettings && (slotSettings.enabled === 1 || slotSettings.enabled === true)) {
-                    const slotCmd = (slotSettings.cmd_slot || 'slot').toLowerCase();
-                    const balanceCmd = (slotSettings.cmd_balance || 'bakiye').toLowerCase();
-                    const leaderboardCmd = (slotSettings.cmd_leaderboard || 'slotsiralama').toLowerCase();
+                    // Strip ! prefix if present from saved commands
+                    const slotCmd = (slotSettings.cmd_slot || 'slot').toLowerCase().replace(/^!/, '');
+                    const balanceCmd = (slotSettings.cmd_balance || 'bakiye').toLowerCase().replace(/^!/, '');
+                    const leaderboardCmd = (slotSettings.cmd_leaderboard || 'slotsiralama').toLowerCase().replace(/^!/, '');
                     const coinName = slotSettings.coin_name || 'Coin';
 
                     console.log(`[Slot] Checking cmd: ${cmdName} vs slotCmd: ${slotCmd}, balanceCmd: ${balanceCmd}`);
@@ -347,7 +348,8 @@ app.post('/webhook', async (req, res) => {
                         }
                     }
                     if (cmdName === balanceCmd) {
-                        const player = await db.getSlotPlayer(channelId, message.sender.id);
+                        const userId = message.sender.user_id || message.sender.id;
+                        const player = await db.getSlotPlayer(channelId, userId);
                         const balance = player ? player.balance : slotSettings.start_balance;
                         const response = `💰 @${message.sender.username} bakiyesi: ${balance.toLocaleString()} ${coinName}`;
                         await kickApi.sendMessageToChannel(channelId, channel.access_token, response, message.message_id, db, channel.refresh_token);
