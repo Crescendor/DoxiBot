@@ -21,6 +21,87 @@ const SUPER_ADMIN = (process.env.SUPER_ADMIN || 'doxish').toLowerCase();
 // Simple in-memory session store (for production, use Redis or DB)
 const sessions = new Map();
 
+// Slot game processor
+async function processSlotCommand(channelId, message, betAmount, settings, db) {
+    const userId = message.sender.id;
+    const username = message.sender.username;
+
+    // Validate bet amount
+    if (betAmount < settings.min_bet) {
+        return `⚠️ @${username} Minimum bahis: ${settings.min_bet} puan`;
+    }
+    if (betAmount > settings.max_bet) {
+        return `⚠️ @${username} Maximum bahis: ${settings.max_bet} puan`;
+    }
+
+    // Check if another game is active
+    const activeGame = await db.getActiveSlotGame(channelId);
+    if (activeGame && activeGame.user_id !== userId) {
+        return `⏳ @${username} Şu an @${activeGame.username} oynuyor, lütfen bekle!`;
+    }
+
+    // Get or create player
+    const player = await db.createOrGetSlotPlayer(channelId, userId, username, settings.start_balance);
+
+    // Check balance
+    if (player.balance < betAmount) {
+        return `💸 @${username} Yetersiz bakiye! Bakiyen: ${player.balance.toLocaleString()} puan`;
+    }
+
+    // Deduct bet and start game
+    const newBalance = player.balance - betAmount;
+    await db.updateSlotPlayer(channelId, userId, newBalance, 0, betAmount, 0);
+    await db.startSlotGame(channelId, userId, username, betAmount, settings.spin_count);
+
+    // Generate random result grid (5x4 = 20 cells)
+    const icons = typeof settings.icons === 'string'
+        ? JSON.parse(settings.icons)
+        : (settings.icons || ['🍒', '🍋', '🔔', '⭐', '💎', '7️⃣']);
+
+    const grid = [];
+    for (let i = 0; i < 20; i++) {
+        grid.push(icons[Math.floor(Math.random() * icons.length)]);
+    }
+
+    // Calculate multiplier based on weights
+    const multipliers = typeof settings.multipliers === 'string'
+        ? JSON.parse(settings.multipliers)
+        : (settings.multipliers || { '2': 40, '5': 25, '10': 15, '20': 10, '50': 7, '100': 3 });
+
+    let roll = Math.random() * 100;
+    let selectedMultiplier = 2;
+    for (const [mult, weight] of Object.entries(multipliers).sort((a, b) => parseInt(a[0]) - parseInt(b[0]))) {
+        if (roll < weight) {
+            selectedMultiplier = parseInt(mult);
+            break;
+        }
+        roll -= weight;
+    }
+
+    // Update game state with result
+    await db.updateSlotGame(channelId, settings.spin_count, selectedMultiplier, grid);
+
+    // Calculate winnings
+    const winAmount = betAmount * selectedMultiplier;
+    const finalBalance = newBalance + winAmount;
+
+    // Update player stats
+    await db.updateSlotPlayer(channelId, userId, finalBalance, winAmount, 0, winAmount);
+
+    // End game after a short delay (overlay will poll and animate)
+    setTimeout(async () => {
+        await db.endSlotGame(channelId);
+    }, 5000 + (settings.spin_count * 2000)); // Animation time
+
+    // Return win message
+    const winMsg = (settings.win_message || '🎰 @{username} {multiplier}x çarpan ile {amount} puan kazandı! 💰')
+        .replace('{username}', username)
+        .replace('{multiplier}', selectedMultiplier)
+        .replace('{amount}', winAmount.toLocaleString());
+
+    return winMsg;
+}
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -239,6 +320,34 @@ app.post('/webhook', async (req, res) => {
                     await kickApi.sendMessageToChannel(channelId, channel.access_token, customResult.response, replyTo);
                     console.log('[Bot] Custom command sent');
                     return res.status(200).json({ received: true });
+                }
+
+                // 1.5 Check slot commands (!slot, !bakiye, !slotsiralama)
+                const slotSettings = await db.getSlotSettings(channelId);
+                if (slotSettings && slotSettings.enabled) {
+                    if (cmdName === 'slot') {
+                        const betAmount = parseInt(cmdParts[1]) || 0;
+                        const slotResponse = await processSlotCommand(channelId, message, betAmount, slotSettings, db);
+                        if (slotResponse) {
+                            await kickApi.sendMessageToChannel(channelId, channel.access_token, slotResponse, message.message_id, db, channel.refresh_token);
+                            return res.status(200).json({ received: true });
+                        }
+                    }
+                    if (cmdName === 'bakiye') {
+                        const player = await db.getSlotPlayer(channelId, message.sender.id);
+                        const balance = player ? player.balance : slotSettings.start_balance;
+                        const response = `💰 @${message.sender.username} bakiyesi: ${balance.toLocaleString()} puan`;
+                        await kickApi.sendMessageToChannel(channelId, channel.access_token, response, message.message_id, db, channel.refresh_token);
+                        return res.status(200).json({ received: true });
+                    }
+                    if (cmdName === 'slotsiralama' || cmdName === 'slotsıralama') {
+                        const leaders = await db.getSlotLeaderboard(channelId, 5);
+                        const response = leaders.length === 0
+                            ? '🏆 Henüz slot oynayan yok!'
+                            : '🏆 Slot Sıralaması: ' + leaders.map((p, i) => `${i + 1}. ${p.username} (${p.total_won.toLocaleString()})`).join(' | ');
+                        await kickApi.sendMessageToChannel(channelId, channel.access_token, response, null, db, channel.refresh_token);
+                        return res.status(200).json({ received: true });
+                    }
                 }
 
                 // 2. Check if game is enabled for game commands
@@ -653,6 +762,74 @@ app.delete('/api/admin/channel/:channelId/game/quest/:id', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ========== SLOT GAME API ==========
+app.get('/api/admin/channel/:id/slot/settings', async (req, res) => {
+    try {
+        const settings = await db.getSlotSettings(req.params.id);
+        res.json(settings);
+    } catch (e) {
+        console.error('[API] getSlotSettings error:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.put('/api/admin/channel/:id/slot/settings', async (req, res) => {
+    try {
+        await db.saveSlotSettings(req.params.id, req.body);
+        res.json({ success: true });
+    } catch (e) {
+        console.error('[API] saveSlotSettings error:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/admin/channel/:id/slot/toggle', async (req, res) => {
+    try {
+        await db.toggleSlot(req.params.id, req.body.enabled);
+        res.json({ success: true });
+    } catch (e) {
+        console.error('[API] toggleSlot error:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/admin/channel/:id/slot/leaderboard', async (req, res) => {
+    try {
+        const leaderboard = await db.getSlotLeaderboard(req.params.id);
+        res.json(leaderboard);
+    } catch (e) {
+        console.error('[API] getSlotLeaderboard error:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Public slot game state for OBS overlay
+app.get('/api/channel/:slug/slot/state', async (req, res) => {
+    try {
+        // Find channel by slug (username)
+        const channels = await db.getAllChannels();
+        const channel = channels.find(c => c.owner_username.toLowerCase() === req.params.slug.toLowerCase());
+        if (!channel) {
+            return res.json({ active: false });
+        }
+
+        const activeGame = await db.getActiveSlotGame(channel.channel_id);
+        const settings = await db.getSlotSettings(channel.channel_id);
+
+        res.json({
+            active: !!activeGame,
+            game: activeGame,
+            settings: {
+                game_name: settings?.game_name || 'Slot Makinesi',
+                icons: settings?.icons || ['🍒', '🍋', '🔔', '⭐', '💎', '7️⃣']
+            }
+        });
+    } catch (e) {
+        console.error('[API] getSlotState error:', e);
+        res.json({ active: false });
+    }
+});
+
 // ========== SUGGESTIONS API ==========
 app.get('/api/admin/channel/:id/suggestions', async (req, res) => {
     try {
@@ -684,6 +861,11 @@ app.delete('/api/admin/channel/:id/suggestion/:suggestionId', async (req, res) =
 
 // Health check for Railway (must be before catch-all)
 app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
+
+// Slot overlay route (must be before catch-all)
+app.get('/:slug/slot', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'slot.html'));
+});
 
 // Channel dashboard with optional page route (e.g., /doxish/items)
 app.get('/:slug/:page?', (req, res) => {

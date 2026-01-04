@@ -213,6 +213,9 @@ function navigateTo(page, pushHistory = true) {
   if (page === 'customcmds') loadCustomCommands();
   if (page === 'pools') loadPools();
   if (page === 'suggestions') loadSuggestions();
+  if (page === 'rpg') loadRPGStatus();
+  if (page === 'slot') loadSlotSettings();
+  if (page === 'slotleaderboard') loadSlotLeaderboard();
 }
 
 async function loadStatus() {
@@ -1611,4 +1614,170 @@ async function deleteSuggestion(suggestionId) {
   await fetch(`/api/admin/channel/${currentChannelId}/suggestion/${suggestionId}`, { method: 'DELETE' });
   showNotification('✅ Silindi', 'success');
   loadSuggestions(suggestionsPage);
+}
+
+// ========== SLOT GAME ==========
+async function loadSlotSettings() {
+  if (!currentChannelId) return;
+
+  // Set overlay URL
+  document.getElementById('slot-overlay-url').textContent = `${window.location.origin}/${currentChannelSlug}/slot`;
+
+  try {
+    const res = await fetch(`/api/admin/channel/${currentChannelId}/slot/settings`);
+    const settings = await res.json();
+
+    // Update status badge
+    const isEnabled = settings.enabled === 1;
+    document.getElementById('slot-status').textContent = isEnabled ? 'Açık' : 'Kapalı';
+    document.getElementById('slot-status').className = `status-badge ${isEnabled ? 'active' : ''}`;
+
+    // Fill form
+    document.getElementById('slot-game-name').value = settings.game_name || 'Slot Makinesi';
+    document.getElementById('slot-min-bet').value = settings.min_bet || 100;
+    document.getElementById('slot-max-bet').value = settings.max_bet || 100000;
+    document.getElementById('slot-spin-count').value = settings.spin_count || 5;
+    document.getElementById('slot-start-balance').value = settings.start_balance || 10000;
+    document.getElementById('slot-win-msg').value = settings.win_message || '';
+    document.getElementById('slot-jackpot-msg').value = settings.jackpot_message || '';
+
+    // Fill multipliers
+    const multipliers = typeof settings.multipliers === 'string'
+      ? JSON.parse(settings.multipliers)
+      : (settings.multipliers || {});
+    document.getElementById('slot-mult-2').value = multipliers['2'] || 40;
+    document.getElementById('slot-mult-5').value = multipliers['5'] || 25;
+    document.getElementById('slot-mult-10').value = multipliers['10'] || 15;
+    document.getElementById('slot-mult-20').value = multipliers['20'] || 10;
+    document.getElementById('slot-mult-50').value = multipliers['50'] || 7;
+    document.getElementById('slot-mult-100').value = multipliers['100'] || 3;
+  } catch (e) {
+    console.error('loadSlotSettings error:', e);
+  }
+}
+
+async function saveSlotSettings() {
+  if (!currentChannelId) return;
+
+  const multipliers = {
+    '2': parseInt(document.getElementById('slot-mult-2').value) || 0,
+    '5': parseInt(document.getElementById('slot-mult-5').value) || 0,
+    '10': parseInt(document.getElementById('slot-mult-10').value) || 0,
+    '20': parseInt(document.getElementById('slot-mult-20').value) || 0,
+    '50': parseInt(document.getElementById('slot-mult-50').value) || 0,
+    '100': parseInt(document.getElementById('slot-mult-100').value) || 0
+  };
+
+  const total = Object.values(multipliers).reduce((a, b) => a + b, 0);
+  if (total !== 100) {
+    showNotification(`⚠️ Çarpan oranları toplamı 100 olmalı (şu an: ${total})`, 'error');
+    return;
+  }
+
+  const settings = {
+    game_name: document.getElementById('slot-game-name').value,
+    min_bet: parseInt(document.getElementById('slot-min-bet').value),
+    max_bet: parseInt(document.getElementById('slot-max-bet').value),
+    spin_count: parseInt(document.getElementById('slot-spin-count').value),
+    start_balance: parseInt(document.getElementById('slot-start-balance').value),
+    win_message: document.getElementById('slot-win-msg').value,
+    jackpot_message: document.getElementById('slot-jackpot-msg').value,
+    multipliers
+  };
+
+  const res = await fetch(`/api/admin/channel/${currentChannelId}/slot/settings`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings)
+  });
+
+  if (res.ok) {
+    showNotification('✅ Slot ayarları kaydedildi!', 'success');
+  } else {
+    showNotification('❌ Kayıt hatası', 'error');
+  }
+}
+
+async function toggleSlot() {
+  if (!currentChannelId) return;
+
+  const statusEl = document.getElementById('slot-status');
+  const isEnabled = statusEl.textContent === 'Açık';
+
+  const res = await fetch(`/api/admin/channel/${currentChannelId}/slot/toggle`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: !isEnabled })
+  });
+
+  if (res.ok) {
+    statusEl.textContent = !isEnabled ? 'Açık' : 'Kapalı';
+    statusEl.className = `status-badge ${!isEnabled ? 'active' : ''}`;
+    showNotification(`🎰 Slot oyunu ${!isEnabled ? 'açıldı' : 'kapatıldı'}!`, 'success');
+  }
+}
+
+async function loadSlotLeaderboard() {
+  if (!currentChannelId) return;
+
+  try {
+    const res = await fetch(`/api/admin/channel/${currentChannelId}/slot/leaderboard`);
+    const leaderboard = await res.json();
+
+    document.getElementById('slot-leaderboard').innerHTML = leaderboard.length === 0
+      ? '<div class="empty-state">Henüz oyuncu yok</div>'
+      : leaderboard.map((p, i) => `
+        <div class="leaderboard-item">
+          <span class="rank">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</span>
+          <span class="name">${esc(p.username)}</span>
+          <span class="stats">💰 ${formatNumber(p.total_won)} kazanç | 🎰 ${p.total_spins} spin | 🏆 ${formatNumber(p.biggest_win)} max</span>
+        </div>
+      `).join('');
+  } catch (e) {
+    console.error('loadSlotLeaderboard error:', e);
+    document.getElementById('slot-leaderboard').innerHTML = '<div class="empty-state">Yüklenemedi</div>';
+  }
+}
+
+function copySlotOverlayLink() {
+  const url = document.getElementById('slot-overlay-url').textContent;
+  navigator.clipboard.writeText(url);
+  showNotification('📋 Overlay linki kopyalandı!', 'success');
+}
+
+// RPG toggle (uses existing game toggle)
+async function toggleRPG() {
+  if (!currentChannelId) return;
+
+  const statusEl = document.getElementById('rpg-status');
+  const isEnabled = statusEl.textContent === 'Açık';
+
+  const res = await fetch(`/api/admin/channel/${currentChannelId}/game-toggle`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: !isEnabled })
+  });
+
+  if (res.ok) {
+    statusEl.textContent = !isEnabled ? 'Açık' : 'Kapalı';
+    statusEl.className = `status-badge ${!isEnabled ? 'active' : ''}`;
+    showNotification(`⚔️ RPG oyunu ${!isEnabled ? 'açıldı' : 'kapatıldı'}!`, 'success');
+  }
+}
+
+async function loadRPGStatus() {
+  if (!currentChannelId) return;
+  try {
+    const res = await fetch(`/api/admin/channel/${currentChannelId}/game-status`);
+    const data = await res.json();
+    const isEnabled = data.enabled;
+    document.getElementById('rpg-status').textContent = isEnabled ? 'Açık' : 'Kapalı';
+    document.getElementById('rpg-status').className = `status-badge ${isEnabled ? 'active' : ''}`;
+  } catch (e) { console.error('loadRPGStatus error:', e); }
+}
+
+function formatNumber(n) {
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+  return n.toString();
 }

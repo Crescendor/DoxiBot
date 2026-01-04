@@ -51,6 +51,16 @@
         <a href="#" class="nav-item" data-page="leaderboard">
           <span class="nav-icon">🏆</span><span>Sıralama</span>
         </a>
+
+        <div class="nav-section">🎮 Oyunlar</div>
+        <a href="#" class="nav-item" data-page="rpg">
+          <span class="nav-icon">⚔️</span><span>RPG Oyunu</span>
+        </a>
+        <a href="#" class="nav-item" data-page="slot">
+          <span class="nav-icon">🎰</span><span>Slot Oyunu</span>
+        </a>
+
+        <div class="nav-section">📦 RPG İçerikleri</div>
         <a href="#" class="nav-item" data-page="items">
           <span class="nav-icon">🎒</span><span>Eşyalar</span>
         </a>
@@ -418,6 +428,140 @@
                 </div>
               </div>
               <button class="btn btn-primary" onclick="saveSettings()" style="margin-top:16px">💾 Kaydet</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RPG Game Settings -->
+        <div id="page-rpg" class="page">
+          <div class="card">
+            <div class="card-header">
+              <h3>⚔️ RPG Oyunu</h3>
+              <div class="toggle-group">
+                <span id="rpg-status" class="status-badge">Kapalı</span>
+                <button id="rpg-toggle-btn" class="btn btn-small" onclick="toggleRPG()">Aç/Kapat</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <p style="color: var(--text-muted); margin-bottom: 16px;">
+                RPG oyunu aktif olduğunda oyuncular !kayit, !av, !profil gibi komutları kullanabilir.
+              </p>
+              <button class="btn btn-primary" onclick="navigateTo('commands')">⚡ Komutları Düzenle</button>
+              <button class="btn" onclick="navigateTo('settings')">⏱️ Cooldown Ayarları</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slot Game Settings -->
+        <div id="page-slot" class="page">
+          <div class="card">
+            <div class="card-header">
+              <h3>🎰 Slot Oyunu</h3>
+              <div class="toggle-group">
+                <span id="slot-status" class="status-badge">Kapalı</span>
+                <button id="slot-toggle-btn" class="btn btn-small" onclick="toggleSlot()">Aç/Kapat</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <!-- Overlay Link -->
+              <div class="overlay-link-box"
+                style="background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 16px; border-radius: 12px; margin-bottom: 24px; border: 1px solid #0f3460;">
+                <div
+                  style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                  <div>
+                    <div style="font-weight: bold; color: #e94560; margin-bottom: 4px;">🎬 OBS Overlay Linki</div>
+                    <code id="slot-overlay-url"
+                      style="background: #0d1b2a; padding: 8px 12px; border-radius: 6px; font-size: 12px; display: block; margin-top: 8px;">Yükleniyor...</code>
+                  </div>
+                  <button class="btn btn-small" onclick="copySlotOverlayLink()">📋 Kopyala</button>
+                </div>
+              </div>
+
+              <!-- Game Name -->
+              <div class="settings-grid" style="margin-bottom: 24px;">
+                <div class="setting-item">
+                  <label>🎰 Oyun İsmi</label>
+                  <input type="text" id="slot-game-name" class="input" placeholder="Slot Makinesi"
+                    value="Slot Makinesi">
+                </div>
+                <div class="setting-item">
+                  <label>🎫 Min Bahis</label>
+                  <input type="number" id="slot-min-bet" class="input" value="100">
+                </div>
+                <div class="setting-item">
+                  <label>💎 Max Bahis</label>
+                  <input type="number" id="slot-max-bet" class="input" value="100000">
+                </div>
+                <div class="setting-item">
+                  <label>🔄 Spin Sayısı (Freespin)</label>
+                  <input type="number" id="slot-spin-count" class="input" value="5">
+                </div>
+                <div class="setting-item">
+                  <label>💰 Başlangıç Bakiyesi</label>
+                  <input type="number" id="slot-start-balance" class="input" value="10000">
+                </div>
+              </div>
+
+              <!-- Multipliers -->
+              <h4 style="margin-bottom: 12px;">📊 Çarpan Oranları (Toplam 100 olmalı)</h4>
+              <div class="multipliers-grid"
+                style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; margin-bottom: 24px;">
+                <div class="multiplier-item">
+                  <label>2x</label>
+                  <input type="number" id="slot-mult-2" class="input" value="40">
+                </div>
+                <div class="multiplier-item">
+                  <label>5x</label>
+                  <input type="number" id="slot-mult-5" class="input" value="25">
+                </div>
+                <div class="multiplier-item">
+                  <label>10x</label>
+                  <input type="number" id="slot-mult-10" class="input" value="15">
+                </div>
+                <div class="multiplier-item">
+                  <label>20x</label>
+                  <input type="number" id="slot-mult-20" class="input" value="10">
+                </div>
+                <div class="multiplier-item">
+                  <label>50x</label>
+                  <input type="number" id="slot-mult-50" class="input" value="7">
+                </div>
+                <div class="multiplier-item">
+                  <label>100x</label>
+                  <input type="number" id="slot-mult-100" class="input" value="3">
+                </div>
+              </div>
+
+              <!-- Messages -->
+              <h4 style="margin-bottom: 12px;">💬 Mesajlar</h4>
+              <div class="settings-grid" style="margin-bottom: 24px;">
+                <div class="setting-item" style="grid-column: span 2;">
+                  <label>🎉 Kazanç Mesajı</label>
+                  <input type="text" id="slot-win-msg" class="input"
+                    value="🎰 @{username} {multiplier}x çarpan ile {amount} puan kazandı! 💰">
+                </div>
+                <div class="setting-item" style="grid-column: span 2;">
+                  <label>🏆 Jackpot Mesajı</label>
+                  <input type="text" id="slot-jackpot-msg" class="input"
+                    value="🎰🎰🎰 JACKPOT! @{username} {amount} puan kazandı! 🎰🎰🎰">
+                </div>
+              </div>
+
+              <button class="btn btn-primary" onclick="saveSlotSettings()">💾 Ayarları Kaydet</button>
+              <button class="btn" onclick="navigateTo('slotleaderboard')">🏆 Liderlik Tablosu</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slot Leaderboard -->
+        <div id="page-slotleaderboard" class="page">
+          <div class="card">
+            <div class="card-header">
+              <h3>🏆 Slot Liderlik Tablosu</h3>
+              <button class="btn btn-small" onclick="loadSlotLeaderboard()">🔄</button>
+            </div>
+            <div class="card-body">
+              <div id="slot-leaderboard" class="leaderboard"></div>
             </div>
           </div>
         </div>

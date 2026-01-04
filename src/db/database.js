@@ -346,6 +346,50 @@ async function initDatabase() {
           ALTER TABLE game_quests ADD CONSTRAINT game_quests_channel_unique UNIQUE (id, channel_id);
         END IF;
       END $$;
+
+      -- ========== SLOT GAME TABLES ==========
+      -- Slot Settings (per-channel)
+      CREATE TABLE IF NOT EXISTS slot_settings (
+        channel_id BIGINT PRIMARY KEY,
+        enabled INTEGER DEFAULT 0,
+        game_name TEXT DEFAULT 'Slot Makinesi',
+        min_bet INTEGER DEFAULT 100,
+        max_bet INTEGER DEFAULT 100000,
+        spin_count INTEGER DEFAULT 5,
+        start_balance INTEGER DEFAULT 10000,
+        multipliers JSONB DEFAULT '{"2": 40, "5": 25, "10": 15, "20": 10, "50": 7, "100": 3}',
+        icons JSONB DEFAULT '["🍒", "🍋", "🔔", "⭐", "💎", "7️⃣"]',
+        win_message TEXT DEFAULT '🎰 @{username} {multiplier}x çarpan ile {amount} puan kazandı! 💰',
+        jackpot_message TEXT DEFAULT '🎰🎰🎰 JACKPOT! @{username} {amount} puan kazandı! 🎰🎰🎰'
+      );
+
+      -- Slot Players (per-channel balances)
+      CREATE TABLE IF NOT EXISTS slot_players (
+        id SERIAL PRIMARY KEY,
+        channel_id BIGINT NOT NULL,
+        user_id BIGINT NOT NULL,
+        username TEXT NOT NULL,
+        balance INTEGER DEFAULT 10000,
+        total_won INTEGER DEFAULT 0,
+        total_lost INTEGER DEFAULT 0,
+        total_spins INTEGER DEFAULT 0,
+        biggest_win INTEGER DEFAULT 0,
+        last_played BIGINT DEFAULT EXTRACT(EPOCH FROM NOW()),
+        UNIQUE(channel_id, user_id)
+      );
+
+      -- Slot Active Game (lock for single player)
+      CREATE TABLE IF NOT EXISTS slot_active_game (
+        channel_id BIGINT PRIMARY KEY,
+        user_id BIGINT NOT NULL,
+        username TEXT NOT NULL,
+        bet_amount INTEGER NOT NULL,
+        current_spin INTEGER DEFAULT 0,
+        total_spins INTEGER DEFAULT 5,
+        current_multiplier INTEGER DEFAULT 0,
+        result JSONB,
+        started_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())
+      );
     `);
         console.log('✅ PostgreSQL veritabanı başlatıldı');
     } finally {
@@ -890,5 +934,117 @@ export const db = {
     async deleteGameQuest(id, channelId) {
         const cid = String(channelId || 'global');
         await pool.query('DELETE FROM game_quests WHERE id = $1 AND channel_id = $2', [id, cid]);
+    },
+
+    // ========== SLOT GAME ==========
+    async getSlotSettings(channelId) {
+        const cid = String(channelId);
+        let result = await pool.query('SELECT * FROM slot_settings WHERE channel_id = $1::BIGINT', [cid]);
+        if (!result.rows[0]) {
+            // Create default settings
+            await pool.query(
+                `INSERT INTO slot_settings (channel_id) VALUES ($1::BIGINT) ON CONFLICT DO NOTHING`,
+                [cid]
+            );
+            result = await pool.query('SELECT * FROM slot_settings WHERE channel_id = $1::BIGINT', [cid]);
+        }
+        return result.rows[0];
+    },
+
+    async saveSlotSettings(channelId, settings) {
+        const cid = String(channelId);
+        await pool.query(
+            `INSERT INTO slot_settings (channel_id, enabled, game_name, min_bet, max_bet, spin_count, start_balance, multipliers, win_message, jackpot_message)
+             VALUES ($1::BIGINT, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+             ON CONFLICT (channel_id) DO UPDATE SET
+             enabled = $2, game_name = $3, min_bet = $4, max_bet = $5, spin_count = $6,
+             start_balance = $7, multipliers = $8, win_message = $9, jackpot_message = $10`,
+            [cid, settings.enabled || 0, settings.game_name || 'Slot Makinesi',
+                settings.min_bet || 100, settings.max_bet || 100000, settings.spin_count || 5,
+                settings.start_balance || 10000, JSON.stringify(settings.multipliers || {}),
+                settings.win_message || '', settings.jackpot_message || '']
+        );
+    },
+
+    async toggleSlot(channelId, enabled) {
+        const cid = String(channelId);
+        await pool.query(
+            `INSERT INTO slot_settings (channel_id, enabled) VALUES ($1::BIGINT, $2)
+             ON CONFLICT (channel_id) DO UPDATE SET enabled = $2`,
+            [cid, enabled ? 1 : 0]
+        );
+    },
+
+    async getSlotPlayer(channelId, userId) {
+        const cid = String(channelId);
+        let result = await pool.query(
+            'SELECT * FROM slot_players WHERE channel_id = $1::BIGINT AND user_id = $2::BIGINT',
+            [cid, String(userId)]
+        );
+        return result.rows[0];
+    },
+
+    async createOrGetSlotPlayer(channelId, userId, username, startBalance = 10000) {
+        const cid = String(channelId);
+        await pool.query(
+            `INSERT INTO slot_players (channel_id, user_id, username, balance)
+             VALUES ($1::BIGINT, $2::BIGINT, $3, $4)
+             ON CONFLICT (channel_id, user_id) DO UPDATE SET username = $3`,
+            [cid, String(userId), username, startBalance]
+        );
+        return this.getSlotPlayer(channelId, userId);
+    },
+
+    async updateSlotPlayer(channelId, userId, balance, won = 0, lost = 0, biggestWin = 0) {
+        const cid = String(channelId);
+        await pool.query(
+            `UPDATE slot_players SET 
+             balance = $3, total_won = total_won + $4, total_lost = total_lost + $5,
+             total_spins = total_spins + 1, biggest_win = GREATEST(biggest_win, $6),
+             last_played = EXTRACT(EPOCH FROM NOW())
+             WHERE channel_id = $1::BIGINT AND user_id = $2::BIGINT`,
+            [cid, String(userId), balance, won, lost, biggestWin]
+        );
+    },
+
+    async getSlotLeaderboard(channelId, limit = 10) {
+        const cid = String(channelId);
+        const result = await pool.query(
+            'SELECT username, balance, total_won, biggest_win, total_spins FROM slot_players WHERE channel_id = $1::BIGINT ORDER BY total_won DESC LIMIT $2',
+            [cid, limit]
+        );
+        return result.rows;
+    },
+
+    async getActiveSlotGame(channelId) {
+        const cid = String(channelId);
+        const result = await pool.query('SELECT * FROM slot_active_game WHERE channel_id = $1::BIGINT', [cid]);
+        return result.rows[0];
+    },
+
+    async startSlotGame(channelId, userId, username, betAmount, totalSpins) {
+        const cid = String(channelId);
+        await pool.query(
+            `INSERT INTO slot_active_game (channel_id, user_id, username, bet_amount, total_spins)
+             VALUES ($1::BIGINT, $2::BIGINT, $3, $4, $5)
+             ON CONFLICT (channel_id) DO UPDATE SET
+             user_id = $2::BIGINT, username = $3, bet_amount = $4, total_spins = $5,
+             current_spin = 0, current_multiplier = 0, result = NULL,
+             started_at = EXTRACT(EPOCH FROM NOW())`,
+            [cid, String(userId), username, betAmount, totalSpins]
+        );
+    },
+
+    async updateSlotGame(channelId, currentSpin, currentMultiplier, result = null) {
+        const cid = String(channelId);
+        await pool.query(
+            `UPDATE slot_active_game SET current_spin = $2, current_multiplier = $3, result = $4 WHERE channel_id = $1::BIGINT`,
+            [cid, currentSpin, currentMultiplier, result ? JSON.stringify(result) : null]
+        );
+    },
+
+    async endSlotGame(channelId) {
+        const cid = String(channelId);
+        await pool.query('DELETE FROM slot_active_game WHERE channel_id = $1::BIGINT', [cid]);
     }
 };

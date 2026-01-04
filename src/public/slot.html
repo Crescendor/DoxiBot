@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slot Overlay</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: transparent;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .slot-machine {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            border-radius: 20px;
+            padding: 20px 30px 30px;
+            box-shadow:
+                0 0 60px rgba(233, 69, 96, 0.3),
+                0 0 100px rgba(233, 69, 96, 0.1),
+                inset 0 0 60px rgba(0, 0, 0, 0.3);
+            border: 3px solid #e94560;
+            animation: slotAppear 0.5s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slot-machine::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg,
+                    transparent 40%,
+                    rgba(255, 255, 255, 0.05) 50%,
+                    transparent 60%);
+            animation: shine 3s linear infinite;
+        }
+
+        @keyframes slotAppear {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes shine {
+            from {
+                transform: translateX(-100%) rotate(45deg);
+            }
+
+            to {
+                transform: translateX(100%) rotate(45deg);
+            }
+        }
+
+        @keyframes fadeOut {
+            to {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+        }
+
+        .slot-machine.hiding {
+            animation: fadeOut 0.5s ease-in forwards;
+        }
+
+        .slot-machine.visible {
+            display: flex;
+        }
+
+        .game-title {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(90deg, #ff6b6b, #e94560, #ff6b6b);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: titleGlow 2s linear infinite;
+            margin-bottom: 15px;
+            text-shadow: 0 0 30px rgba(233, 69, 96, 0.5);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        @keyframes titleGlow {
+
+            0%,
+            100% {
+                background-position: 0% center;
+            }
+
+            50% {
+                background-position: 100% center;
+            }
+        }
+
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            font-size: 16px;
+            color: #fff;
+        }
+
+        .player-name {
+            color: #00d9ff;
+            font-weight: bold;
+        }
+
+        .bet-amount {
+            background: rgba(233, 69, 96, 0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            border: 1px solid #e94560;
+        }
+
+        .slot-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 70px);
+            grid-template-rows: repeat(4, 70px);
+            gap: 8px;
+            background: #0d1b2a;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8);
+            margin-bottom: 15px;
+        }
+
+        .slot-cell {
+            background: linear-gradient(145deg, #1a2a3d, #0d1b2a);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 36px;
+            border: 2px solid #2a3f5f;
+            transition: all 0.3s ease;
+        }
+
+        .slot-cell.spinning {
+            animation: spin 0.1s linear infinite;
+        }
+
+        .slot-cell.winner {
+            background: linear-gradient(145deg, #2a5f3f, #1a4f2f);
+            border-color: #4ade80;
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.5);
+            animation: pulse 0.5s ease infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: translateY(-5px);
+            }
+
+            50% {
+                transform: translateY(5px);
+            }
+
+            100% {
+                transform: translateY(-5px);
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .spin-counter {
+            font-size: 14px;
+            color: #a0a0a0;
+            margin-bottom: 10px;
+        }
+
+        .multiplier-display {
+            font-size: 48px;
+            font-weight: 900;
+            color: #ffd700;
+            text-shadow:
+                0 0 20px rgba(255, 215, 0, 0.8),
+                0 0 40px rgba(255, 215, 0, 0.4);
+            animation: multiplierPop 0.5s ease;
+        }
+
+        @keyframes multiplierPop {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+
+            70% {
+                transform: scale(1.2);
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .jackpot-text {
+            font-size: 36px;
+            font-weight: 900;
+            color: #ff6b6b;
+            text-transform: uppercase;
+            animation: jackpotAnimation 0.5s ease infinite alternate;
+        }
+
+        @keyframes jackpotAnimation {
+            from {
+                transform: scale(1);
+                text-shadow: 0 0 20px #ff6b6b;
+            }
+
+            to {
+                transform: scale(1.1);
+                text-shadow: 0 0 40px #ff6b6b, 0 0 60px #ffd700;
+            }
+        }
+
+        .total-win {
+            font-size: 24px;
+            color: #4ade80;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="slot-machine" class="slot-machine">
+        <div id="game-title" class="game-title">Slot Makinesi</div>
+
+        <div class="player-info">
+            <span class="player-name" id="player-name">@Oyuncu</span>
+            <span class="bet-amount">🎫 <span id="bet-amount">0</span> puan</span>
+        </div>
+
+        <div id="slot-grid" class="slot-grid">
+            <!-- 5x4 = 20 cells will be generated by JS -->
+        </div>
+
+        <div class="spin-counter">
+            Spin: <span id="current-spin">0</span> / <span id="total-spins">5</span>
+        </div>
+
+        <div id="multiplier-display" class="multiplier-display"></div>
+        <div id="total-win" class="total-win"></div>
+    </div>
+
+    <script>
+        const DEFAULT_ICONS = ['🍒', '🍋', '🔔', '⭐', '💎', '7️⃣'];
+        let currentState = null;
+        let pollInterval = null;
+        let icons = DEFAULT_ICONS;
+        let isAnimating = false;
+
+        // Get channel slug from URL
+        const pathParts = window.location.pathname.split('/');
+        const channelSlug = pathParts[1];
+
+        // Initialize grid
+        function initGrid() {
+            const grid = document.getElementById('slot-grid');
+            grid.innerHTML = '';
+            for (let i = 0; i < 20; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'slot-cell';
+                cell.id = `cell-${i}`;
+                cell.textContent = icons[Math.floor(Math.random() * icons.length)];
+                grid.appendChild(cell);
+            }
+        }
+
+        // Spin animation
+        async function spinAnimation(finalResult, spinNumber, totalSpins) {
+            isAnimating = true;
+            const cells = document.querySelectorAll('.slot-cell');
+
+            // Start spinning all
+            cells.forEach(cell => cell.classList.add('spinning'));
+
+            // Spin for 1-2 seconds with random icons
+            const spinDuration = 1500 + Math.random() * 500;
+            const spinStart = Date.now();
+
+            while (Date.now() - spinStart < spinDuration) {
+                cells.forEach(cell => {
+                    cell.textContent = icons[Math.floor(Math.random() * icons.length)];
+                });
+                await new Promise(r => setTimeout(r, 50));
+            }
+
+            // Stop spinning and show result
+            cells.forEach((cell, i) => {
+                cell.classList.remove('spinning');
+                if (finalResult && finalResult[i]) {
+                    cell.textContent = finalResult[i];
+                }
+            });
+
+            // Update spin counter
+            document.getElementById('current-spin').textContent = spinNumber;
+            document.getElementById('total-spins').textContent = totalSpins;
+
+            isAnimating = false;
+        }
+
+        // Show multiplier
+        function showMultiplier(multiplier, isJackpot = false) {
+            const display = document.getElementById('multiplier-display');
+            if (isJackpot) {
+                display.className = 'jackpot-text';
+                display.textContent = '🎰 JACKPOT! 🎰';
+            } else if (multiplier > 1) {
+                display.className = 'multiplier-display';
+                display.textContent = `${multiplier}x`;
+            } else {
+                display.textContent = '';
+            }
+        }
+
+        // Show total win
+        function showTotalWin(amount) {
+            const display = document.getElementById('total-win');
+            if (amount > 0) {
+                display.textContent = `+${amount.toLocaleString()} puan kazandı!`;
+            } else {
+                display.textContent = '';
+            }
+        }
+
+        // Poll for game state
+        async function pollState() {
+            try {
+                const res = await fetch(`/api/channel/${channelSlug}/slot/state`);
+                const data = await res.json();
+
+                const machine = document.getElementById('slot-machine');
+
+                if (data.active && data.game) {
+                    // Update icons from settings
+                    if (data.settings && data.settings.icons) {
+                        icons = typeof data.settings.icons === 'string'
+                            ? JSON.parse(data.settings.icons)
+                            : data.settings.icons;
+                    }
+
+                    // Update title
+                    if (data.settings && data.settings.game_name) {
+                        document.getElementById('game-title').textContent = data.settings.game_name;
+                    }
+
+                    // Show machine if hidden
+                    if (!machine.classList.contains('visible')) {
+                        machine.classList.remove('hiding');
+                        machine.classList.add('visible');
+                        initGrid();
+                    }
+
+                    // Update player info
+                    document.getElementById('player-name').textContent = `@${data.game.username}`;
+                    document.getElementById('bet-amount').textContent = data.game.bet_amount.toLocaleString();
+
+                    // Handle spin animation if new spin detected
+                    if (!currentState || currentState.current_spin !== data.game.current_spin) {
+                        if (data.game.result && !isAnimating) {
+                            await spinAnimation(
+                                data.game.result,
+                                data.game.current_spin,
+                                data.game.total_spins
+                            );
+                            showMultiplier(data.game.current_multiplier, data.game.current_multiplier >= 100);
+                        }
+                    }
+
+                    currentState = data.game;
+
+                } else if (currentState && !data.active) {
+                    // Game ended - show final result then fade out
+                    if (currentState.result) {
+                        showMultiplier(currentState.current_multiplier, currentState.current_multiplier >= 100);
+                        const winAmount = currentState.bet_amount * currentState.current_multiplier;
+                        showTotalWin(winAmount);
+                    }
+
+                    // Wait a bit then hide
+                    setTimeout(() => {
+                        machine.classList.add('hiding');
+                        setTimeout(() => {
+                            machine.classList.remove('visible', 'hiding');
+                            currentState = null;
+                            document.getElementById('multiplier-display').textContent = '';
+                            document.getElementById('total-win').textContent = '';
+                        }, 500);
+                    }, 3000);
+                }
+            } catch (e) {
+                console.error('Poll error:', e);
+            }
+        }
+
+        // Start polling
+        initGrid();
+        pollState();
+        pollInterval = setInterval(pollState, 500);
+    </script>
+</body>
+
+</html>
