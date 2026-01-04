@@ -1652,6 +1652,20 @@ async function loadSlotSettings() {
     document.getElementById('slot-mult-20').value = multipliers['20'] || 10;
     document.getElementById('slot-mult-50').value = multipliers['50'] || 7;
     document.getElementById('slot-mult-100').value = multipliers['100'] || 3;
+
+    // Fill icons
+    const icons = typeof settings.icons === 'string'
+      ? JSON.parse(settings.icons)
+      : (settings.icons || ['🍒', '🍋', '🔔', '⭐', '💎', '7️⃣']);
+    for (let i = 0; i < 6; i++) {
+      const input = document.getElementById(`slot-icon-${i + 1}`);
+      if (input && icons[i]) input.value = icons[i];
+    }
+
+    // Fill commands
+    document.getElementById('slot-cmd-slot').value = settings.cmd_slot || 'slot';
+    document.getElementById('slot-cmd-balance').value = settings.cmd_balance || 'bakiye';
+    document.getElementById('slot-cmd-leaderboard').value = settings.cmd_leaderboard || 'slotsiralama';
   } catch (e) {
     console.error('loadSlotSettings error:', e);
   }
@@ -1675,6 +1689,12 @@ async function saveSlotSettings() {
     return;
   }
 
+  // Collect icons
+  const icons = [];
+  for (let i = 1; i <= 6; i++) {
+    icons.push(document.getElementById(`slot-icon-${i}`).value || '❓');
+  }
+
   const settings = {
     game_name: document.getElementById('slot-game-name').value,
     coin_name: document.getElementById('slot-coin-name').value,
@@ -1684,7 +1704,11 @@ async function saveSlotSettings() {
     start_balance: parseInt(document.getElementById('slot-start-balance').value),
     win_message: document.getElementById('slot-win-msg').value,
     jackpot_message: document.getElementById('slot-jackpot-msg').value,
-    multipliers
+    multipliers,
+    icons,
+    cmd_slot: document.getElementById('slot-cmd-slot').value || 'slot',
+    cmd_balance: document.getElementById('slot-cmd-balance').value || 'bakiye',
+    cmd_leaderboard: document.getElementById('slot-cmd-leaderboard').value || 'slotsiralama'
   };
 
   const res = await fetch(`/api/admin/channel/${currentChannelId}/slot/settings`, {

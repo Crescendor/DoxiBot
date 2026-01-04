@@ -536,18 +536,66 @@
                 </div>
               </div>
 
+              <!-- Icons -->
+              <h4 style="margin-bottom: 12px;">🎨 İkonlar (Emoji veya URL)</h4>
+              <div class="icons-grid"
+                style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 24px;">
+                <div class="icon-item">
+                  <label>İkon 1</label>
+                  <input type="text" id="slot-icon-1" class="input" value="🍒" placeholder="🍒 veya URL">
+                </div>
+                <div class="icon-item">
+                  <label>İkon 2</label>
+                  <input type="text" id="slot-icon-2" class="input" value="🍋" placeholder="🍋 veya URL">
+                </div>
+                <div class="icon-item">
+                  <label>İkon 3</label>
+                  <input type="text" id="slot-icon-3" class="input" value="🔔" placeholder="🔔 veya URL">
+                </div>
+                <div class="icon-item">
+                  <label>İkon 4</label>
+                  <input type="text" id="slot-icon-4" class="input" value="⭐" placeholder="⭐ veya URL">
+                </div>
+                <div class="icon-item">
+                  <label>İkon 5</label>
+                  <input type="text" id="slot-icon-5" class="input" value="💎" placeholder="💎 veya URL">
+                </div>
+                <div class="icon-item">
+                  <label>İkon 6</label>
+                  <input type="text" id="slot-icon-6" class="input" value="7️⃣" placeholder="7️⃣ veya URL">
+                </div>
+              </div>
+
+              <!-- Slot Commands -->
+              <h4 style="margin-bottom: 12px;">⚡ Komutlar (Ayarlanabilir)</h4>
+              <div class="settings-grid" style="margin-bottom: 24px;">
+                <div class="setting-item">
+                  <label>🎰 Slot Komutu</label>
+                  <input type="text" id="slot-cmd-slot" class="input" value="slot" placeholder="slot">
+                </div>
+                <div class="setting-item">
+                  <label>💰 Bakiye Komutu</label>
+                  <input type="text" id="slot-cmd-balance" class="input" value="bakiye" placeholder="bakiye">
+                </div>
+                <div class="setting-item">
+                  <label>🏆 Sıralama Komutu</label>
+                  <input type="text" id="slot-cmd-leaderboard" class="input" value="slotsiralama"
+                    placeholder="slotsiralama">
+                </div>
+              </div>
+
               <!-- Messages -->
               <h4 style="margin-bottom: 12px;">💬 Mesajlar</h4>
               <div class="settings-grid" style="margin-bottom: 24px;">
                 <div class="setting-item" style="grid-column: span 2;">
                   <label>🎉 Kazanç Mesajı</label>
                   <input type="text" id="slot-win-msg" class="input"
-                    value="🎰 @{username} {multiplier}x çarpan ile {amount} puan kazandı! 💰">
+                    value="🎰 @{username} {multiplier}x çarpan ile {amount} {coin} kazandı! 💰">
                 </div>
                 <div class="setting-item" style="grid-column: span 2;">
                   <label>🏆 Jackpot Mesajı</label>
                   <input type="text" id="slot-jackpot-msg" class="input"
-                    value="🎰🎰🎰 JACKPOT! @{username} {amount} puan kazandı! 🎰🎰🎰">
+                    value="🎰🎰🎰 JACKPOT! @{username} {amount} {coin} kazandı! 🎰🎰🎰">
                 </div>
               </div>
 

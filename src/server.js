@@ -324,10 +324,15 @@ app.post('/webhook', async (req, res) => {
                     return res.status(200).json({ received: true });
                 }
 
-                // 1.5 Check slot commands (!slot, !bakiye, !slotsiralama)
+                // 1.5 Check slot commands (dynamic names from settings)
                 const slotSettings = await db.getSlotSettings(channelId);
                 if (slotSettings && slotSettings.enabled) {
-                    if (cmdName === 'slot') {
+                    const slotCmd = (slotSettings.cmd_slot || 'slot').toLowerCase();
+                    const balanceCmd = (slotSettings.cmd_balance || 'bakiye').toLowerCase();
+                    const leaderboardCmd = (slotSettings.cmd_leaderboard || 'slotsiralama').toLowerCase();
+                    const coinName = slotSettings.coin_name || 'Coin';
+
+                    if (cmdName === slotCmd) {
                         const betAmount = parseInt(cmdParts[1]) || 0;
                         const slotResponse = await processSlotCommand(channelId, message, betAmount, slotSettings, db);
                         if (slotResponse) {
@@ -335,18 +340,18 @@ app.post('/webhook', async (req, res) => {
                             return res.status(200).json({ received: true });
                         }
                     }
-                    if (cmdName === 'bakiye') {
+                    if (cmdName === balanceCmd) {
                         const player = await db.getSlotPlayer(channelId, message.sender.id);
                         const balance = player ? player.balance : slotSettings.start_balance;
-                        const response = `💰 @${message.sender.username} bakiyesi: ${balance.toLocaleString()} puan`;
+                        const response = `💰 @${message.sender.username} bakiyesi: ${balance.toLocaleString()} ${coinName}`;
                         await kickApi.sendMessageToChannel(channelId, channel.access_token, response, message.message_id, db, channel.refresh_token);
                         return res.status(200).json({ received: true });
                     }
-                    if (cmdName === 'slotsiralama' || cmdName === 'slotsıralama') {
+                    if (cmdName === leaderboardCmd || cmdName === 'slotsıralama') {
                         const leaders = await db.getSlotLeaderboard(channelId, 5);
                         const response = leaders.length === 0
                             ? '🏆 Henüz slot oynayan yok!'
-                            : '🏆 Slot Sıralaması: ' + leaders.map((p, i) => `${i + 1}. ${p.username} (${p.total_won.toLocaleString()})`).join(' | ');
+                            : '🏆 Slot Sıralaması: ' + leaders.map((p, i) => `${i + 1}. ${p.username} (${p.total_won.toLocaleString()} ${coinName})`).join(' | ');
                         await kickApi.sendMessageToChannel(channelId, channel.access_token, response, null, db, channel.refresh_token);
                         return res.status(200).json({ received: true });
                     }
