@@ -371,15 +371,14 @@
             }
         }
 
-        // Show multiplier on specific cell
+        // Show multiplier on specific cell (overlay on top of emoji)
         function showMultiplierOnCell(cellIndex, multiplier) {
             const cell = document.getElementById(`cell-${cellIndex}`);
             if (cell) {
-                // Clear cell content and show multiplier
+                // Add multiplier overlay on top of emoji (don't replace emoji)
                 const multDiv = document.createElement('div');
                 multDiv.className = 'cell-multiplier';
                 multDiv.textContent = `${multiplier}x`;
-                cell.innerHTML = '';
                 cell.appendChild(multDiv);
                 cell.classList.add('winner');
             }
@@ -405,9 +404,11 @@
             document.getElementById('current-spin').textContent = spinIndex + 1;
             document.getElementById('total-spins').textContent = totalSpins;
 
-            // Clear previous multipliers and winners
+            // Clear previous multipliers and winners (keep emoji, just remove multiplier overlay)
             cells.forEach(cell => {
                 cell.classList.remove('winner');
+                const multDiv = cell.querySelector('.cell-multiplier');
+                if (multDiv) multDiv.remove();
                 cell.innerHTML = renderIcon(icons[Math.floor(Math.random() * icons.length)]);
             });
 

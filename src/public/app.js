@@ -1639,6 +1639,7 @@ async function loadSlotSettings() {
     document.getElementById('slot-max-bet').value = settings.max_bet || 100000000;
     document.getElementById('slot-spin-count').value = settings.spin_count || 5;
     document.getElementById('slot-start-balance').value = settings.start_balance || 1000;
+    document.getElementById('slot-win-chance').value = settings.win_chance || 40;
     document.getElementById('slot-win-msg').value = settings.win_message || '';
     document.getElementById('slot-jackpot-msg').value = settings.jackpot_message || '';
 
@@ -1702,6 +1703,7 @@ async function saveSlotSettings() {
     max_bet: parseInt(document.getElementById('slot-max-bet').value),
     spin_count: parseInt(document.getElementById('slot-spin-count').value),
     start_balance: parseInt(document.getElementById('slot-start-balance').value),
+    win_chance: parseInt(document.getElementById('slot-win-chance').value) || 40,
     win_message: document.getElementById('slot-win-msg').value,
     jackpot_message: document.getElementById('slot-jackpot-msg').value,
     multipliers,

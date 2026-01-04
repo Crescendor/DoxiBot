@@ -410,6 +410,9 @@ async function initDatabase() {
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'slot_settings' AND column_name = 'cmd_leaderboard') THEN
           ALTER TABLE slot_settings ADD COLUMN cmd_leaderboard TEXT DEFAULT 'slotsiralama';
         END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'slot_settings' AND column_name = 'win_chance') THEN
+          ALTER TABLE slot_settings ADD COLUMN win_chance INTEGER DEFAULT 40;
+        END IF;
       END $$;
     `);
         console.log('✅ PostgreSQL veritabanı başlatıldı');
@@ -976,16 +979,16 @@ export const db = {
         const cid = String(channelId);
         console.log('[DB] saveSlotSettings called for channel:', cid, 'settings:', JSON.stringify(settings).substring(0, 200));
         try {
-            // Try with all columns first (new schema)
+            // Try with all columns first (new schema with win_chance)
             await pool.query(
-                `INSERT INTO slot_settings (channel_id, enabled, game_name, coin_name, min_bet, max_bet, spin_count, start_balance, multipliers, icons, cmd_slot, cmd_balance, cmd_leaderboard, win_message, jackpot_message)
-                 VALUES ($1::BIGINT, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                `INSERT INTO slot_settings (channel_id, enabled, game_name, coin_name, min_bet, max_bet, spin_count, start_balance, win_chance, multipliers, icons, cmd_slot, cmd_balance, cmd_leaderboard, win_message, jackpot_message)
+                 VALUES ($1::BIGINT, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
                  ON CONFLICT (channel_id) DO UPDATE SET
                  enabled = $2, game_name = $3, coin_name = $4, min_bet = $5, max_bet = $6, spin_count = $7,
-                 start_balance = $8, multipliers = $9, icons = $10, cmd_slot = $11, cmd_balance = $12, cmd_leaderboard = $13, win_message = $14, jackpot_message = $15`,
+                 start_balance = $8, win_chance = $9, multipliers = $10, icons = $11, cmd_slot = $12, cmd_balance = $13, cmd_leaderboard = $14, win_message = $15, jackpot_message = $16`,
                 [cid, settings.enabled ?? 0, settings.game_name || 'Slot Makinesi', settings.coin_name || 'Coin',
                     settings.min_bet || 10, settings.max_bet || 100000000, settings.spin_count || 5,
-                    settings.start_balance || 1000, JSON.stringify(settings.multipliers || {}),
+                    settings.start_balance || 1000, settings.win_chance || 40, JSON.stringify(settings.multipliers || {}),
                     JSON.stringify(settings.icons || ['🍒', '🍋', '🔔', '⭐', '💎', '7️⃣']),
                     settings.cmd_slot || 'slot', settings.cmd_balance || 'bakiye', settings.cmd_leaderboard || 'slotsiralama',
                     settings.win_message || '', settings.jackpot_message || '']

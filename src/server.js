@@ -75,7 +75,8 @@ async function processSlotCommand(channelId, message, betAmount, settings, db) {
         // Roll for multiplier
         let roll = Math.random() * 100;
         let multiplier = 0; // 0 means no win
-        let hasWin = Math.random() < 0.6; // 60% chance to win on each spin
+        const winChance = (settings.win_chance || 40) / 100; // Default 40% win chance
+        let hasWin = Math.random() < winChance;
 
         if (hasWin) {
             for (const [mult, weight] of Object.entries(multipliers).sort((a, b) => parseInt(a[0]) - parseInt(b[0]))) {
@@ -88,10 +89,10 @@ async function processSlotCommand(channelId, message, betAmount, settings, db) {
             if (multiplier === 0) multiplier = 2; // Default minimum
         }
 
-        // Random cell positions for multiplier display (1-3 multipliers per spin)
+        // Random cell positions for multiplier display (max 2 multipliers per spin)
         const multiplierCells = [];
         if (multiplier > 0) {
-            const numMultipliers = 1 + Math.floor(Math.random() * 3); // 1-3 multipliers
+            const numMultipliers = 1 + Math.floor(Math.random() * 2); // 1-2 multipliers
             for (let m = 0; m < numMultipliers; m++) {
                 let pos = Math.floor(Math.random() * 20);
                 if (!multiplierCells.includes(pos)) {
