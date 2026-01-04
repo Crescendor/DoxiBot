@@ -1621,7 +1621,7 @@ async function loadSlotSettings() {
   if (!currentChannelId) return;
 
   // Set overlay URL
-  document.getElementById('slot-overlay-url').textContent = `${window.location.origin}/${currentChannelSlug}/slot`;
+  document.getElementById('slot-overlay-url').textContent = `${window.location.origin}/${currentChannelSlug}/overlay/slot`;
 
   try {
     const res = await fetch(`/api/admin/channel/${currentChannelId}/slot/settings`);

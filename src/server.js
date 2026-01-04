@@ -876,7 +876,7 @@ app.delete('/api/admin/channel/:id/suggestion/:suggestionId', async (req, res) =
 app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
 
 // Slot overlay route (must be before catch-all)
-app.get('/:slug/slot', (req, res) => {
+app.get('/:slug/overlay/slot', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'slot.html'));
 });
 
