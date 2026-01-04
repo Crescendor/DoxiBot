@@ -326,16 +326,22 @@ app.post('/webhook', async (req, res) => {
 
                 // 1.5 Check slot commands (dynamic names from settings)
                 const slotSettings = await db.getSlotSettings(channelId);
-                if (slotSettings && slotSettings.enabled) {
+                console.log(`[Slot] Settings for ${channelId}:`, slotSettings ? { enabled: slotSettings.enabled, cmd_slot: slotSettings.cmd_slot } : 'null');
+
+                if (slotSettings && (slotSettings.enabled === 1 || slotSettings.enabled === true)) {
                     const slotCmd = (slotSettings.cmd_slot || 'slot').toLowerCase();
                     const balanceCmd = (slotSettings.cmd_balance || 'bakiye').toLowerCase();
                     const leaderboardCmd = (slotSettings.cmd_leaderboard || 'slotsiralama').toLowerCase();
                     const coinName = slotSettings.coin_name || 'Coin';
 
+                    console.log(`[Slot] Checking cmd: ${cmdName} vs slotCmd: ${slotCmd}, balanceCmd: ${balanceCmd}`);
+
                     if (cmdName === slotCmd) {
                         const betAmount = parseInt(cmdParts[1]) || 0;
+                        console.log(`[Slot] Processing slot command with bet: ${betAmount}`);
                         const slotResponse = await processSlotCommand(channelId, message, betAmount, slotSettings, db);
                         if (slotResponse) {
+                            console.log(`[Slot] Response: ${slotResponse}`);
                             await kickApi.sendMessageToChannel(channelId, channel.access_token, slotResponse, message.message_id, db, channel.refresh_token);
                             return res.status(200).json({ received: true });
                         }
