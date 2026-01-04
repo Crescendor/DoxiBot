@@ -23,7 +23,7 @@ const sessions = new Map();
 
 // Slot game processor
 async function processSlotCommand(channelId, message, betAmount, settings, db) {
-    const userId = message.sender.id;
+    const userId = message.sender.user_id || message.sender.id;
     const username = message.sender.username;
 
     // Validate bet amount
