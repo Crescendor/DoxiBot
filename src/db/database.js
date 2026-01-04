@@ -394,6 +394,23 @@ async function initDatabase() {
         result JSONB,
         started_at BIGINT DEFAULT EXTRACT(EPOCH FROM NOW())
       );
+
+      -- Migration: Add new columns to slot_settings if they don't exist
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'slot_settings' AND column_name = 'coin_name') THEN
+          ALTER TABLE slot_settings ADD COLUMN coin_name TEXT DEFAULT 'Coin';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'slot_settings' AND column_name = 'cmd_slot') THEN
+          ALTER TABLE slot_settings ADD COLUMN cmd_slot TEXT DEFAULT 'slot';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'slot_settings' AND column_name = 'cmd_balance') THEN
+          ALTER TABLE slot_settings ADD COLUMN cmd_balance TEXT DEFAULT 'bakiye';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'slot_settings' AND column_name = 'cmd_leaderboard') THEN
+          ALTER TABLE slot_settings ADD COLUMN cmd_leaderboard TEXT DEFAULT 'slotsiralama';
+        END IF;
+      END $$;
     `);
         console.log('✅ PostgreSQL veritabanı başlatıldı');
     } finally {
