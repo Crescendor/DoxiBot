@@ -94,10 +94,12 @@ async function processSlotCommand(channelId, message, betAmount, settings, db) {
     }, 5000 + (settings.spin_count * 2000)); // Animation time
 
     // Return win message
-    const winMsg = (settings.win_message || '🎰 @{username} {multiplier}x çarpan ile {amount} puan kazandı! 💰')
+    const coinName = settings.coin_name || 'Coin';
+    const winMsg = (settings.win_message || '🎰 @{username} {multiplier}x çarpan ile {amount} {coin} kazandı! 💰')
         .replace('{username}', username)
         .replace('{multiplier}', selectedMultiplier)
-        .replace('{amount}', winAmount.toLocaleString());
+        .replace('{amount}', winAmount.toLocaleString())
+        .replace('{coin}', coinName);
 
     return winMsg;
 }

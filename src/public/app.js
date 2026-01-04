@@ -1634,10 +1634,11 @@ async function loadSlotSettings() {
 
     // Fill form
     document.getElementById('slot-game-name').value = settings.game_name || 'Slot Makinesi';
-    document.getElementById('slot-min-bet').value = settings.min_bet || 100;
-    document.getElementById('slot-max-bet').value = settings.max_bet || 100000;
+    document.getElementById('slot-coin-name').value = settings.coin_name || 'Coin';
+    document.getElementById('slot-min-bet').value = settings.min_bet || 10;
+    document.getElementById('slot-max-bet').value = settings.max_bet || 100000000;
     document.getElementById('slot-spin-count').value = settings.spin_count || 5;
-    document.getElementById('slot-start-balance').value = settings.start_balance || 10000;
+    document.getElementById('slot-start-balance').value = settings.start_balance || 1000;
     document.getElementById('slot-win-msg').value = settings.win_message || '';
     document.getElementById('slot-jackpot-msg').value = settings.jackpot_message || '';
 
@@ -1676,6 +1677,7 @@ async function saveSlotSettings() {
 
   const settings = {
     game_name: document.getElementById('slot-game-name').value,
+    coin_name: document.getElementById('slot-coin-name').value,
     min_bet: parseInt(document.getElementById('slot-min-bet').value),
     max_bet: parseInt(document.getElementById('slot-max-bet').value),
     spin_count: parseInt(document.getElementById('slot-spin-count').value),

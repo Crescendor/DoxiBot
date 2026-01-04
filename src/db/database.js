@@ -353,14 +353,15 @@ async function initDatabase() {
         channel_id BIGINT PRIMARY KEY,
         enabled INTEGER DEFAULT 0,
         game_name TEXT DEFAULT 'Slot Makinesi',
-        min_bet INTEGER DEFAULT 100,
-        max_bet INTEGER DEFAULT 100000,
+        coin_name TEXT DEFAULT 'Coin',
+        min_bet INTEGER DEFAULT 10,
+        max_bet INTEGER DEFAULT 100000000,
         spin_count INTEGER DEFAULT 5,
-        start_balance INTEGER DEFAULT 10000,
+        start_balance INTEGER DEFAULT 1000,
         multipliers JSONB DEFAULT '{"2": 40, "5": 25, "10": 15, "20": 10, "50": 7, "100": 3}',
         icons JSONB DEFAULT '["🍒", "🍋", "🔔", "⭐", "💎", "7️⃣"]',
-        win_message TEXT DEFAULT '🎰 @{username} {multiplier}x çarpan ile {amount} puan kazandı! 💰',
-        jackpot_message TEXT DEFAULT '🎰🎰🎰 JACKPOT! @{username} {amount} puan kazandı! 🎰🎰🎰'
+        win_message TEXT DEFAULT '🎰 @{username} {multiplier}x çarpan ile {amount} {coin} kazandı! 💰',
+        jackpot_message TEXT DEFAULT '🎰🎰🎰 JACKPOT! @{username} {amount} {coin} kazandı! 🎰🎰🎰'
       );
 
       -- Slot Players (per-channel balances)
@@ -954,14 +955,14 @@ export const db = {
     async saveSlotSettings(channelId, settings) {
         const cid = String(channelId);
         await pool.query(
-            `INSERT INTO slot_settings (channel_id, enabled, game_name, min_bet, max_bet, spin_count, start_balance, multipliers, win_message, jackpot_message)
-             VALUES ($1::BIGINT, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            `INSERT INTO slot_settings (channel_id, enabled, game_name, coin_name, min_bet, max_bet, spin_count, start_balance, multipliers, win_message, jackpot_message)
+             VALUES ($1::BIGINT, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
              ON CONFLICT (channel_id) DO UPDATE SET
-             enabled = $2, game_name = $3, min_bet = $4, max_bet = $5, spin_count = $6,
-             start_balance = $7, multipliers = $8, win_message = $9, jackpot_message = $10`,
-            [cid, settings.enabled || 0, settings.game_name || 'Slot Makinesi',
-                settings.min_bet || 100, settings.max_bet || 100000, settings.spin_count || 5,
-                settings.start_balance || 10000, JSON.stringify(settings.multipliers || {}),
+             enabled = $2, game_name = $3, coin_name = $4, min_bet = $5, max_bet = $6, spin_count = $7,
+             start_balance = $8, multipliers = $9, win_message = $10, jackpot_message = $11`,
+            [cid, settings.enabled || 0, settings.game_name || 'Slot Makinesi', settings.coin_name || 'Coin',
+                settings.min_bet || 10, settings.max_bet || 100000000, settings.spin_count || 5,
+                settings.start_balance || 1000, JSON.stringify(settings.multipliers || {}),
                 settings.win_message || '', settings.jackpot_message || '']
         );
     },
