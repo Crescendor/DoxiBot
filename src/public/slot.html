@@ -37,7 +37,7 @@
         }
 
         .slot-container.hiding {
-            animation: containerDisappear 0.6s ease-in forwards;
+            animation: containerDisappear 0.5s ease-in forwards;
         }
 
         @keyframes containerAppear {
@@ -125,6 +125,7 @@
             box-shadow:
                 0 20px 60px rgba(0, 0, 0, 0.8),
                 inset 0 0 100px rgba(106, 58, 154, 0.2);
+            position: relative;
         }
 
         /* Slot Grid */
@@ -173,17 +174,17 @@
         }
 
         .slot-cell.spinning {
-            animation: symbolDrop 0.15s linear infinite;
+            animation: symbolDrop 0.1s linear infinite;
         }
 
         @keyframes symbolDrop {
             0% {
-                transform: translateY(-10px);
-                opacity: 0.7;
+                transform: translateY(-15px);
+                opacity: 0.5;
             }
 
             100% {
-                transform: translateY(10px);
+                transform: translateY(15px);
                 opacity: 1;
             }
         }
@@ -206,67 +207,65 @@
             }
         }
 
-        /* Falling Multiplier - Gates of Olympus Style */
-        .multiplier-drop {
-            position: absolute;
-            font-size: 48px;
-            font-weight: 900;
-            color: #ffd700;
-            text-shadow:
-                0 0 20px #ffd700,
-                0 0 40px #ff8c00,
-                0 4px 8px rgba(0, 0, 0, 0.8);
-            animation: dropMultiplier 1s ease-out forwards;
-            z-index: 100;
-            pointer-events: none;
-        }
-
-        @keyframes dropMultiplier {
-            0% {
-                transform: translateY(-100px) scale(0.5);
-                opacity: 0;
-            }
-
-            40% {
-                transform: translateY(0) scale(1.3);
-                opacity: 1;
-            }
-
-            60% {
-                transform: translateY(-20px) scale(1);
-            }
-
-            100% {
-                transform: translateY(0) scale(1);
-                opacity: 1;
-            }
-        }
-
-        /* Win Display */
-        .win-display {
+        /* Multiplier on Cell - Gates of Olympus style */
+        .cell-multiplier {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 64px;
+            font-size: 32px;
             font-weight: 900;
             color: #ffd700;
             text-shadow:
-                0 0 30px #ffd700,
-                0 0 60px #ff8c00,
-                0 6px 12px rgba(0, 0, 0, 0.8);
-            animation: winAppear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-            z-index: 200;
-            white-space: nowrap;
+                0 0 10px #ffd700,
+                0 0 20px #ff8c00,
+                0 3px 6px rgba(0, 0, 0, 0.9);
+            z-index: 100;
+            animation: multiplierAppear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            background: radial-gradient(circle, rgba(255, 140, 0, 0.8) 0%, transparent 70%);
+            padding: 10px;
+            border-radius: 50%;
         }
 
-        @keyframes winAppear {
+        @keyframes multiplierAppear {
+            0% {
+                transform: translate(-50%, -150%) scale(0.3);
+                opacity: 0;
+            }
+
+            60% {
+                transform: translate(-50%, -40%) scale(1.2);
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Spin Win Display */
+        .spin-win-display {
+            position: absolute;
+            bottom: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 28px;
+            font-weight: 800;
+            color: #00ff88;
+            text-shadow: 0 0 15px #00ff88;
+            white-space: nowrap;
+            animation: spinWinAppear 0.4s ease;
+        }
+
+        @keyframes spinWinAppear {
             from {
-                transform: translate(-50%, -50%) scale(0);
+                transform: translateX(-50%) scale(0.5);
+                opacity: 0;
             }
 
             to {
-                transform: translate(-50%, -50%) scale(1);
+                transform: translateX(-50%) scale(1);
+                opacity: 1;
             }
         }
 
@@ -275,16 +274,18 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            gap: 10px;
             width: 100%;
             padding: 15px;
             background: linear-gradient(180deg, #1a0a2a, #0a0015);
             border-radius: 0 0 20px 20px;
             border: 4px solid #6a3a9a;
             border-top: none;
+            margin-top: 40px;
         }
 
         .total-win {
-            font-size: 32px;
+            font-size: 36px;
             font-weight: 800;
             background: linear-gradient(90deg, #ffd700, #ff8c00);
             background-clip: text;
@@ -294,8 +295,13 @@
 
         .coin-name {
             color: #a080c0;
+            font-size: 24px;
+        }
+
+        /* No win display */
+        .no-win {
+            color: #666;
             font-size: 20px;
-            margin-left: 8px;
         }
     </style>
 </head>
@@ -321,6 +327,7 @@
             <div id="slot-grid" class="slot-grid">
                 <!-- 5x4 = 20 cells -->
             </div>
+            <div id="spin-win" class="spin-win-display" style="display: none;"></div>
         </div>
 
         <!-- Bottom Bar -->
@@ -332,11 +339,12 @@
 
     <script>
         const DEFAULT_ICONS = ['🍒', '🍋', '🔔', '⭐', '💎', '7️⃣'];
-        let currentState = null;
+        let currentGameData = null;
         let pollInterval = null;
         let icons = DEFAULT_ICONS;
         let isAnimating = false;
-        let lastSpinNumber = 0;
+        let currentSpinIndex = 0;
+        let runningTotalWin = 0;
 
         // Get channel slug from URL
         const pathParts = window.location.pathname.split('/');
@@ -344,10 +352,10 @@
 
         // Check if icon is URL or emoji
         function renderIcon(icon) {
-            if (icon.startsWith('http://') || icon.startsWith('https://')) {
+            if (icon && (icon.startsWith('http://') || icon.startsWith('https://'))) {
                 return `<img src="${icon}" alt="icon">`;
             }
-            return icon;
+            return icon || '❓';
         }
 
         // Initialize grid
@@ -363,75 +371,135 @@
             }
         }
 
-        // Show falling multiplier (Gates of Olympus style)
-        function showFallingMultiplier(multiplier) {
-            const grid = document.getElementById('slot-grid');
-            const mult = document.createElement('div');
-            mult.className = 'multiplier-drop';
-            mult.textContent = `${multiplier}x`;
-
-            // Random position
-            const x = 50 + Math.random() * 400;
-            const y = 50 + Math.random() * 250;
-            mult.style.left = `${x}px`;
-            mult.style.top = `${y}px`;
-
-            grid.appendChild(mult);
-
-            setTimeout(() => mult.remove(), 2000);
+        // Show multiplier on specific cell
+        function showMultiplierOnCell(cellIndex, multiplier) {
+            const cell = document.getElementById(`cell-${cellIndex}`);
+            if (cell) {
+                // Clear cell content and show multiplier
+                const multDiv = document.createElement('div');
+                multDiv.className = 'cell-multiplier';
+                multDiv.textContent = `${multiplier}x`;
+                cell.innerHTML = '';
+                cell.appendChild(multDiv);
+                cell.classList.add('winner');
+            }
         }
 
-        // Spin animation
-        async function spinAnimation(finalResult, spinNumber, totalSpins, multiplier) {
+        // Show spin win
+        function showSpinWin(amount, coinName) {
+            const display = document.getElementById('spin-win');
+            if (amount > 0) {
+                display.textContent = `+${amount.toLocaleString()} ${coinName}`;
+                display.style.display = 'block';
+            } else {
+                display.style.display = 'none';
+            }
+        }
+
+        // Animate single spin (Pragmatic style)
+        async function animateSpin(spinData, spinIndex, totalSpins, coinName) {
             isAnimating = true;
             const cells = document.querySelectorAll('.slot-cell');
 
-            // Start spinning all
+            // Update spin counter
+            document.getElementById('current-spin').textContent = spinIndex + 1;
+            document.getElementById('total-spins').textContent = totalSpins;
+
+            // Clear previous multipliers and winners
+            cells.forEach(cell => {
+                cell.classList.remove('winner');
+                cell.innerHTML = renderIcon(icons[Math.floor(Math.random() * icons.length)]);
+            });
+
+            // Start spinning
             cells.forEach(cell => cell.classList.add('spinning'));
 
-            // Spin for 1.5-2 seconds with random icons
-            const spinDuration = 1500 + Math.random() * 500;
+            // Spin for ~1.5 seconds
+            const spinDuration = 1500;
             const spinStart = Date.now();
 
             while (Date.now() - spinStart < spinDuration) {
                 cells.forEach(cell => {
-                    cell.innerHTML = renderIcon(icons[Math.floor(Math.random() * icons.length)]);
+                    if (!cell.querySelector('.cell-multiplier')) {
+                        cell.innerHTML = renderIcon(icons[Math.floor(Math.random() * icons.length)]);
+                    }
                 });
-                await new Promise(r => setTimeout(r, 60));
+                await new Promise(r => setTimeout(r, 80));
             }
 
-            // Stop spinning and show result
+            // Stop spinning and show final grid
             cells.forEach((cell, i) => {
                 cell.classList.remove('spinning');
-                if (finalResult && finalResult[i]) {
-                    cell.innerHTML = renderIcon(finalResult[i]);
+                if (spinData.grid && spinData.grid[i]) {
+                    cell.innerHTML = renderIcon(spinData.grid[i]);
                 }
             });
 
-            // Update spin counter
-            document.getElementById('current-spin').textContent = spinNumber;
-            document.getElementById('total-spins').textContent = totalSpins;
+            // Wait a bit then show multipliers on cells
+            await new Promise(r => setTimeout(r, 300));
 
-            // Show falling multiplier if > 1
-            if (multiplier > 1) {
-                await new Promise(r => setTimeout(r, 300));
-                showFallingMultiplier(multiplier);
+            // Show multipliers on random cells if this spin won
+            if (spinData.multiplier > 0 && spinData.multiplier_cells) {
+                for (const cellIndex of spinData.multiplier_cells) {
+                    showMultiplierOnCell(cellIndex, spinData.multiplier);
+                }
+
+                // Update running total and show spin win
+                runningTotalWin += spinData.win;
+                showSpinWin(spinData.win, coinName);
+
+                // Update total display
+                document.getElementById('total-win').textContent = `+${runningTotalWin.toLocaleString()}`;
+                document.getElementById('coin-name').textContent = coinName;
+            } else {
+                showSpinWin(0, coinName);
             }
+
+            // Wait before next spin
+            await new Promise(r => setTimeout(r, 800));
 
             isAnimating = false;
         }
 
-        // Show total win
-        function showTotalWin(amount, coinName) {
-            const display = document.getElementById('total-win');
-            const coinEl = document.getElementById('coin-name');
-            if (amount > 0) {
-                display.textContent = `+${amount.toLocaleString()}`;
-                coinEl.textContent = coinName || 'Coin';
-            } else {
-                display.textContent = '';
-                coinEl.textContent = '';
+        // Run all spins sequentially
+        async function runAllSpins(gameData, settings) {
+            const spinsData = gameData.result?.spins || [];
+            const coinName = settings?.coin_name || 'Coin';
+            runningTotalWin = 0;
+
+            document.getElementById('total-win').textContent = '';
+            document.getElementById('coin-name').textContent = '';
+
+            for (let i = 0; i < spinsData.length; i++) {
+                await animateSpin(spinsData[i], i, spinsData.length, coinName);
             }
+
+            // Show final total
+            const totalWin = gameData.result?.total_win || 0;
+            if (totalWin > 0) {
+                document.getElementById('total-win').textContent = `+${totalWin.toLocaleString()}`;
+                document.getElementById('coin-name').textContent = coinName;
+            } else {
+                document.getElementById('total-win').textContent = '0';
+                document.getElementById('coin-name').textContent = coinName;
+            }
+
+            // Hide after 2 seconds
+            await new Promise(r => setTimeout(r, 2000));
+            hideOverlay();
+        }
+
+        // Hide overlay with animation
+        function hideOverlay() {
+            const container = document.getElementById('slot-container');
+            container.classList.add('hiding');
+            setTimeout(() => {
+                container.classList.remove('visible', 'hiding');
+                currentGameData = null;
+                currentSpinIndex = 0;
+                runningTotalWin = 0;
+                document.getElementById('spin-win').style.display = 'none';
+            }, 500);
         }
 
         // Poll for game state
@@ -442,7 +510,10 @@
 
                 const container = document.getElementById('slot-container');
 
-                if (data.active && data.game) {
+                if (data.active && data.game && !isAnimating && !currentGameData) {
+                    // New game started
+                    currentGameData = data.game;
+
                     // Update icons from settings
                     if (data.settings && data.settings.icons) {
                         icons = typeof data.settings.icons === 'string'
@@ -455,49 +526,19 @@
                         document.getElementById('game-title').textContent = data.settings.game_name.toUpperCase();
                     }
 
-                    // Show container if hidden
-                    if (!container.classList.contains('visible')) {
-                        container.classList.remove('hiding');
-                        container.classList.add('visible');
-                        initGrid();
-                        lastSpinNumber = 0;
-                    }
+                    // Show container
+                    container.classList.remove('hiding');
+                    container.classList.add('visible');
+                    initGrid();
 
                     // Update player info
                     document.getElementById('player-name').textContent = `@${data.game.username}`;
                     document.getElementById('bet-amount').textContent = data.game.bet_amount.toLocaleString();
 
-                    // Handle spin animation if new spin detected
-                    if (data.game.current_spin > lastSpinNumber && data.game.result && !isAnimating) {
-                        await spinAnimation(
-                            data.game.result,
-                            data.game.current_spin,
-                            data.game.total_spins,
-                            data.game.current_multiplier
-                        );
-                        lastSpinNumber = data.game.current_spin;
+                    // Run all spins
+                    if (data.game.result && data.game.result.spins) {
+                        runAllSpins(data.game, data.settings);
                     }
-
-                    currentState = data.game;
-
-                } else if (currentState && !data.active) {
-                    // Game ended - show final result then fade out
-                    if (currentState.current_multiplier > 0) {
-                        const winAmount = currentState.bet_amount * currentState.current_multiplier;
-                        showTotalWin(winAmount, data.settings?.coin_name);
-                    }
-
-                    // Wait a bit then hide
-                    setTimeout(() => {
-                        container.classList.add('hiding');
-                        setTimeout(() => {
-                            container.classList.remove('visible', 'hiding');
-                            currentState = null;
-                            lastSpinNumber = 0;
-                            document.getElementById('total-win').textContent = '';
-                            document.getElementById('coin-name').textContent = '';
-                        }, 600);
-                    }, 3000);
                 }
             } catch (e) {
                 console.error('Poll error:', e);
@@ -507,7 +548,7 @@
         // Start polling
         initGrid();
         pollState();
-        pollInterval = setInterval(pollState, 400);
+        pollInterval = setInterval(pollState, 500);
     </script>
 </body>
 

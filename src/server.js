@@ -21,7 +21,7 @@ const SUPER_ADMIN = (process.env.SUPER_ADMIN || 'doxish').toLowerCase();
 // Simple in-memory session store (for production, use Redis or DB)
 const sessions = new Map();
 
-// Slot game processor
+// Slot game processor - Pragmatic Games style (each spin pays separately)
 async function processSlotCommand(channelId, message, betAmount, settings, db) {
     const userId = message.sender.user_id || message.sender.id;
     const username = message.sender.username;
@@ -43,66 +43,103 @@ async function processSlotCommand(channelId, message, betAmount, settings, db) {
     // Get or create player
     const player = await db.createOrGetSlotPlayer(channelId, userId, username, settings.start_balance);
 
+    // Total bet = betAmount * spin_count (each spin costs the same)
+    const spinCount = settings.spin_count || 5;
+    const totalBet = betAmount * spinCount;
+
     // Check balance
-    if (player.balance < betAmount) {
-        return `💸 @${username} Yetersiz bakiye! Bakiyen: ${player.balance.toLocaleString()} puan`;
+    if (player.balance < totalBet) {
+        return `💸 @${username} Yetersiz bakiye! (${spinCount} spin x ${betAmount} = ${totalBet.toLocaleString()} gerekli)`;
     }
 
-    // Deduct bet and start game
-    const newBalance = player.balance - betAmount;
-    await db.updateSlotPlayer(channelId, userId, newBalance, 0, betAmount, 0);
-    await db.startSlotGame(channelId, userId, username, betAmount, settings.spin_count);
-
-    // Generate random result grid (5x4 = 20 cells)
+    // Parse icons and multipliers
     const icons = typeof settings.icons === 'string'
         ? JSON.parse(settings.icons)
         : (settings.icons || ['🍒', '🍋', '🔔', '⭐', '💎', '7️⃣']);
 
-    const grid = [];
-    for (let i = 0; i < 20; i++) {
-        grid.push(icons[Math.floor(Math.random() * icons.length)]);
-    }
-
-    // Calculate multiplier based on weights
     const multipliers = typeof settings.multipliers === 'string'
         ? JSON.parse(settings.multipliers)
         : (settings.multipliers || { '2': 40, '5': 25, '10': 15, '20': 10, '50': 7, '100': 3 });
 
-    let roll = Math.random() * 100;
-    let selectedMultiplier = 2;
-    for (const [mult, weight] of Object.entries(multipliers).sort((a, b) => parseInt(a[0]) - parseInt(b[0]))) {
-        if (roll < weight) {
-            selectedMultiplier = parseInt(mult);
-            break;
+    // Generate all spins upfront (Pragmatic style - each spin independent)
+    const spins = [];
+    let totalWin = 0;
+
+    for (let i = 0; i < spinCount; i++) {
+        // Generate grid for this spin
+        const grid = [];
+        for (let j = 0; j < 20; j++) {
+            grid.push(icons[Math.floor(Math.random() * icons.length)]);
         }
-        roll -= weight;
+
+        // Roll for multiplier
+        let roll = Math.random() * 100;
+        let multiplier = 0; // 0 means no win
+        let hasWin = Math.random() < 0.6; // 60% chance to win on each spin
+
+        if (hasWin) {
+            for (const [mult, weight] of Object.entries(multipliers).sort((a, b) => parseInt(a[0]) - parseInt(b[0]))) {
+                if (roll < weight) {
+                    multiplier = parseInt(mult);
+                    break;
+                }
+                roll -= weight;
+            }
+            if (multiplier === 0) multiplier = 2; // Default minimum
+        }
+
+        // Random cell positions for multiplier display (1-3 multipliers per spin)
+        const multiplierCells = [];
+        if (multiplier > 0) {
+            const numMultipliers = 1 + Math.floor(Math.random() * 3); // 1-3 multipliers
+            for (let m = 0; m < numMultipliers; m++) {
+                let pos = Math.floor(Math.random() * 20);
+                if (!multiplierCells.includes(pos)) {
+                    multiplierCells.push(pos);
+                }
+            }
+        }
+
+        const spinWin = multiplier > 0 ? betAmount * multiplier : 0;
+        totalWin += spinWin;
+
+        spins.push({
+            spin_number: i + 1,
+            grid,
+            multiplier,
+            multiplier_cells: multiplierCells,
+            win: spinWin
+        });
     }
 
-    // Update game state with result
-    await db.updateSlotGame(channelId, settings.spin_count, selectedMultiplier, grid);
+    // Deduct total bet
+    const newBalance = player.balance - totalBet;
+    await db.updateSlotPlayer(channelId, userId, newBalance, 0, totalBet, 0);
 
-    // Calculate winnings
-    const winAmount = betAmount * selectedMultiplier;
-    const finalBalance = newBalance + winAmount;
+    // Start game with all spins data
+    await db.startSlotGameWithSpins(channelId, userId, username, betAmount, spinCount, spins, totalWin);
 
-    // Update player stats
-    await db.updateSlotPlayer(channelId, userId, finalBalance, winAmount, 0, winAmount);
+    // Update player stats with total win
+    const finalBalance = newBalance + totalWin;
+    await db.updateSlotPlayer(channelId, userId, finalBalance, totalWin, 0, totalWin > player.biggest_win ? totalWin : 0);
 
-    // End game after a short delay (overlay will poll and animate)
+    // End game after animation time (2 sec per spin + 2 sec fade out)
+    const animationTime = (spinCount * 2500) + 2000;
     setTimeout(async () => {
         await db.endSlotGame(channelId);
-    }, 5000 + (settings.spin_count * 2000)); // Animation time
+    }, animationTime);
 
     // Return win message
     const coinName = settings.coin_name || 'Coin';
-    const winMsg = (settings.win_message || '🎰 @{username} {multiplier}x çarpan ile {amount} {coin} kazandı! 💰')
+    const winMsg = (settings.win_message || '🎰 @{username} {amount} {coin} kazandı! 💰')
         .replace('{username}', username)
-        .replace('{multiplier}', selectedMultiplier)
-        .replace('{amount}', winAmount.toLocaleString())
+        .replace('{multiplier}', 'x')
+        .replace('{amount}', totalWin.toLocaleString())
         .replace('{coin}', coinName);
 
     return winMsg;
 }
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

@@ -1090,5 +1090,19 @@ export const db = {
     async endSlotGame(channelId) {
         const cid = String(channelId);
         await pool.query('DELETE FROM slot_active_game WHERE channel_id = $1::BIGINT', [cid]);
+    },
+
+    // Pragmatic style - store all spins upfront
+    async startSlotGameWithSpins(channelId, userId, username, betAmount, totalSpins, spins, totalWin) {
+        const cid = String(channelId);
+        await pool.query(
+            `INSERT INTO slot_active_game (channel_id, user_id, username, bet_amount, total_spins, result, current_spin, current_multiplier)
+             VALUES ($1::BIGINT, $2::BIGINT, $3, $4, $5, $6, 0, $7)
+             ON CONFLICT (channel_id) DO UPDATE SET
+             user_id = $2::BIGINT, username = $3, bet_amount = $4, total_spins = $5,
+             result = $6, current_spin = 0, current_multiplier = $7,
+             started_at = EXTRACT(EPOCH FROM NOW())`,
+            [cid, String(userId), username, betAmount, totalSpins, JSON.stringify({ spins, total_win: totalWin }), totalWin]
+        );
     }
 };
