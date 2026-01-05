@@ -1142,5 +1142,35 @@ export const db = {
              started_at = EXTRACT(EPOCH FROM NOW())`,
             [cid, String(userId), username, betAmount, spinCount, JSON.stringify({ spins, total_win: grandTotalWin }), grandTotalWin]
         );
+    },
+
+    // Gates of Olympus style - store tumble data
+    async startSlotGameWithTumbles(channelId, userId, username, betAmount, tumbles, totalWin, tumbleCount) {
+        const cid = String(channelId);
+        await pool.query(
+            `INSERT INTO slot_active_game (channel_id, user_id, username, bet_amount, total_spins, result, current_spin, current_multiplier)
+             VALUES ($1::BIGINT, $2::BIGINT, $3, $4, $5, $6, 0, $7)
+             ON CONFLICT (channel_id) DO UPDATE SET
+             user_id = $2::BIGINT, username = $3, bet_amount = $4, total_spins = $5,
+             result = $6, current_spin = 0, current_multiplier = $7,
+             started_at = EXTRACT(EPOCH FROM NOW())`,
+            [cid, String(userId), username, betAmount, tumbleCount, JSON.stringify({ tumbles, total_win: totalWin, tumble_count: tumbleCount }), totalWin]
+        );
+    },
+
+    // Bonus Buy Freespin - store all spins with cumulative multiplier
+    async startSlotGameWithBonusBuy(channelId, userId, username, betAmount, spins, grandTotalWin, finalMultiplier) {
+        const cid = String(channelId);
+        await pool.query(
+            `INSERT INTO slot_active_game (channel_id, user_id, username, bet_amount, total_spins, result, current_spin, current_multiplier)
+             VALUES ($1::BIGINT, $2::BIGINT, $3, $4, $5, $6, 0, $7)
+             ON CONFLICT (channel_id) DO UPDATE SET
+             user_id = $2::BIGINT, username = $3, bet_amount = $4, total_spins = $5,
+             result = $6, current_spin = 0, current_multiplier = $7,
+             started_at = EXTRACT(EPOCH FROM NOW())`,
+            [cid, String(userId), username, betAmount, spins.length,
+                JSON.stringify({ spins, grand_total_win: grandTotalWin, final_multiplier: finalMultiplier }),
+                finalMultiplier]
+        );
     }
 };

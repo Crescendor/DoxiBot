@@ -1669,28 +1669,29 @@ async function loadSlotSettings() {
     document.getElementById('slot-cmd-balance').value = settings.cmd_balance || 'bakiye';
     document.getElementById('slot-cmd-leaderboard').value = settings.cmd_leaderboard || 'slotsiralama';
 
-    // Fill icon payouts (20-line system)
+    // Fill icon payouts (Gates of Olympus scatter pays)
     const iconPayouts = typeof settings.icon_payouts === 'string'
       ? JSON.parse(settings.icon_payouts)
       : (settings.icon_payouts || {});
     const defaultPayouts = [
-      { match3: 2, match4: 5, match5: 10 },
-      { match3: 3, match4: 8, match5: 15 },
-      { match3: 5, match4: 12, match5: 25 },
-      { match3: 8, match4: 20, match5: 50 },
-      { match3: 15, match4: 40, match5: 100 },
-      { match3: 25, match4: 75, match5: 250 }
+      { s8: 50, s10: 25, s12: 100 },  // Crown
+      { s8: 25, s10: 12, s12: 50 },   // Diamond
+      { s8: 10, s10: 5, s12: 25 },    // Star
+      { s8: 5, s10: 2, s12: 10 },     // Bell
+      { s8: 3, s10: 1, s12: 8 },      // Grape
+      { s8: 2, s10: 1, s12: 5 }       // Cherry
     ];
     for (let i = 0; i < 6; i++) {
       const icon = icons[i];
       const payout = iconPayouts[icon] || defaultPayouts[i];
-      document.getElementById(`slot-payout-${i + 1}-3`).value = payout.match3 || defaultPayouts[i].match3;
-      document.getElementById(`slot-payout-${i + 1}-4`).value = payout.match4 || defaultPayouts[i].match4;
-      document.getElementById(`slot-payout-${i + 1}-5`).value = payout.match5 || defaultPayouts[i].match5;
+      document.getElementById(`slot-payout-${i + 1}-3`).value = payout.s8 || defaultPayouts[i].s8;
+      document.getElementById(`slot-payout-${i + 1}-4`).value = payout.s10 || defaultPayouts[i].s10;
+      document.getElementById(`slot-payout-${i + 1}-5`).value = payout.s12 || defaultPayouts[i].s12;
       // Update payout icon display
       const payoutIconEl = document.getElementById(`payout-icon-${i + 1}`);
       if (payoutIconEl) payoutIconEl.textContent = icon;
     }
+
   } catch (e) {
     console.error('loadSlotSettings error:', e);
   }
@@ -1720,16 +1721,17 @@ async function saveSlotSettings() {
     icons.push(document.getElementById(`slot-icon-${i}`).value || '❓');
   }
 
-  // Collect icon payouts
+  // Collect icon payouts (scatter pays format)
   const iconPayouts = {};
   for (let i = 1; i <= 6; i++) {
     const icon = icons[i - 1];
     iconPayouts[icon] = {
-      match3: parseInt(document.getElementById(`slot-payout-${i}-3`).value) || 2,
-      match4: parseInt(document.getElementById(`slot-payout-${i}-4`).value) || 5,
-      match5: parseInt(document.getElementById(`slot-payout-${i}-5`).value) || 10
+      s8: parseInt(document.getElementById(`slot-payout-${i}-3`).value) || 2,
+      s10: parseInt(document.getElementById(`slot-payout-${i}-4`).value) || 1,
+      s12: parseInt(document.getElementById(`slot-payout-${i}-5`).value) || 5
     };
   }
+
 
   const settings = {
     game_name: document.getElementById('slot-game-name').value,
