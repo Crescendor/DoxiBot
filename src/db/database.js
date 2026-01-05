@@ -416,6 +416,9 @@ async function initDatabase() {
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'slot_settings' AND column_name = 'icon_payouts') THEN
           ALTER TABLE slot_settings ADD COLUMN icon_payouts TEXT DEFAULT '{}';
         END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'slot_settings' AND column_name = 'lose_message') THEN
+          ALTER TABLE slot_settings ADD COLUMN lose_message TEXT DEFAULT '';
+        END IF;
       END $$;
     `);
         console.log('✅ PostgreSQL veritabanı başlatıldı');
@@ -982,20 +985,20 @@ export const db = {
         const cid = String(channelId);
         console.log('[DB] saveSlotSettings called for channel:', cid, 'settings:', JSON.stringify(settings).substring(0, 200));
         try {
-            // Try with all columns first (new schema with win_chance and icon_payouts)
+            // Try with all columns first (new schema with win_chance, icon_payouts, lose_message)
             await pool.query(
-                `INSERT INTO slot_settings (channel_id, enabled, game_name, coin_name, min_bet, max_bet, spin_count, start_balance, win_chance, multipliers, icons, icon_payouts, cmd_slot, cmd_balance, cmd_leaderboard, win_message, jackpot_message)
-                 VALUES ($1::BIGINT, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+                `INSERT INTO slot_settings (channel_id, enabled, game_name, coin_name, min_bet, max_bet, spin_count, start_balance, win_chance, multipliers, icons, icon_payouts, cmd_slot, cmd_balance, cmd_leaderboard, win_message, lose_message, jackpot_message)
+                 VALUES ($1::BIGINT, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
                  ON CONFLICT (channel_id) DO UPDATE SET
                  enabled = $2, game_name = $3, coin_name = $4, min_bet = $5, max_bet = $6, spin_count = $7,
-                 start_balance = $8, win_chance = $9, multipliers = $10, icons = $11, icon_payouts = $12, cmd_slot = $13, cmd_balance = $14, cmd_leaderboard = $15, win_message = $16, jackpot_message = $17`,
+                 start_balance = $8, win_chance = $9, multipliers = $10, icons = $11, icon_payouts = $12, cmd_slot = $13, cmd_balance = $14, cmd_leaderboard = $15, win_message = $16, lose_message = $17, jackpot_message = $18`,
                 [cid, settings.enabled ?? 0, settings.game_name || 'Slot Makinesi', settings.coin_name || 'Coin',
                     settings.min_bet || 10, settings.max_bet || 100000000, settings.spin_count || 5,
                     settings.start_balance || 1000, settings.win_chance || 40, JSON.stringify(settings.multipliers || {}),
                     JSON.stringify(settings.icons || ['🍒', '🍋', '🔔', '⭐', '💎', '7️⃣']),
                     JSON.stringify(settings.icon_payouts || {}),
                     settings.cmd_slot || 'slot', settings.cmd_balance || 'bakiye', settings.cmd_leaderboard || 'slotsiralama',
-                    settings.win_message || '', settings.jackpot_message || '']
+                    settings.win_message || '', settings.lose_message || '', settings.jackpot_message || '']
             );
             console.log('[DB] saveSlotSettings SUCCESS (full schema)');
         } catch (e) {
@@ -1124,6 +1127,20 @@ export const db = {
              result = $5, current_spin = 0, current_multiplier = $6,
              started_at = EXTRACT(EPOCH FROM NOW())`,
             [cid, String(userId), username, betAmount, JSON.stringify({ grid, winning_lines: winningLines, total_win: totalWin }), totalWin]
+        );
+    },
+
+    // 5 Freespin system - store all spins with winning lines
+    async startSlotGameWithFreespins(channelId, userId, username, betAmount, spinCount, spins, grandTotalWin) {
+        const cid = String(channelId);
+        await pool.query(
+            `INSERT INTO slot_active_game (channel_id, user_id, username, bet_amount, total_spins, result, current_spin, current_multiplier)
+             VALUES ($1::BIGINT, $2::BIGINT, $3, $4, $5, $6, 0, $7)
+             ON CONFLICT (channel_id) DO UPDATE SET
+             user_id = $2::BIGINT, username = $3, bet_amount = $4, total_spins = $5,
+             result = $6, current_spin = 0, current_multiplier = $7,
+             started_at = EXTRACT(EPOCH FROM NOW())`,
+            [cid, String(userId), username, betAmount, spinCount, JSON.stringify({ spins, total_win: grandTotalWin }), grandTotalWin]
         );
     }
 };

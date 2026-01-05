@@ -1641,6 +1641,7 @@ async function loadSlotSettings() {
     document.getElementById('slot-start-balance').value = settings.start_balance || 1000;
     document.getElementById('slot-win-chance').value = settings.win_chance || 40;
     document.getElementById('slot-win-msg').value = settings.win_message || '';
+    document.getElementById('slot-lose-msg').value = settings.lose_message || '';
     document.getElementById('slot-jackpot-msg').value = settings.jackpot_message || '';
 
     // Fill multipliers
@@ -1739,6 +1740,7 @@ async function saveSlotSettings() {
     start_balance: parseInt(document.getElementById('slot-start-balance').value),
     win_chance: parseInt(document.getElementById('slot-win-chance').value) || 40,
     win_message: document.getElementById('slot-win-msg').value,
+    lose_message: document.getElementById('slot-lose-msg').value,
     jackpot_message: document.getElementById('slot-jackpot-msg').value,
     multipliers,
     icons,

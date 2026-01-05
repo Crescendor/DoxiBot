@@ -680,7 +680,14 @@
                 <div class="setting-item" style="grid-column: span 2;">
                   <label>🎉 Kazanç Mesajı</label>
                   <input type="text" id="slot-win-msg" class="input"
-                    value="🎰 @{username} {multiplier}x çarpan ile {amount} {coin} kazandı! 💰">
+                    value="🎰 @{username} {spin_count} freespin'de {amount} {coin} kazandı! 💰"
+                    placeholder="Değişkenler: {username}, {spin_count}, {amount}, {coin}, {bet}">
+                </div>
+                <div class="setting-item" style="grid-column: span 2;">
+                  <label>😢 Kayıp Mesajı</label>
+                  <input type="text" id="slot-lose-msg" class="input"
+                    value="🎰 @{username} {spin_count} freespin'de kazanamadı. Tekrar dene!"
+                    placeholder="Değişkenler: {username}, {spin_count}, {coin}, {bet}">
                 </div>
                 <div class="setting-item" style="grid-column: span 2;">
                   <label>🏆 Jackpot Mesajı</label>

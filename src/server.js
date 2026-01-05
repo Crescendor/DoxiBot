@@ -112,7 +112,7 @@ function calculateWinningLines(grid, icons, iconPayouts, betAmount) {
     return winningLines;
 }
 
-// Slot game processor - Classic 20-Line system
+// Slot game processor - 5 Freespin system with 20-Line per spin
 async function processSlotCommand(channelId, message, betAmount, settings, db) {
     const userId = message.sender.user_id || message.sender.id;
     const username = message.sender.username;
@@ -134,7 +134,7 @@ async function processSlotCommand(channelId, message, betAmount, settings, db) {
     // Get or create player
     const player = await db.createOrGetSlotPlayer(channelId, userId, username, settings.start_balance);
 
-    // Single bet deduction (not multiplied by spin count)
+    // Single bet for all freespins
     if (player.balance < betAmount) {
         return `💸 @${username} Yetersiz bakiye! Bakiyen: ${player.balance.toLocaleString()} puan`;
     }
@@ -156,42 +156,70 @@ async function processSlotCommand(channelId, message, betAmount, settings, db) {
         }
     }
 
-    // Generate grid (5x4 = 20 cells)
-    const grid = [];
-    for (let i = 0; i < 20; i++) {
-        grid.push(icons[Math.floor(Math.random() * icons.length)]);
+    // Freespin count (default 5)
+    const spinCount = settings.spin_count || 5;
+
+    // Generate all spins upfront
+    const spins = [];
+    let grandTotalWin = 0;
+
+    for (let s = 0; s < spinCount; s++) {
+        // Generate grid for this spin (5x4 = 20 cells)
+        const grid = [];
+        for (let i = 0; i < 20; i++) {
+            grid.push(icons[Math.floor(Math.random() * icons.length)]);
+        }
+
+        // Calculate winning lines for this spin
+        const winningLines = calculateWinningLines(grid, icons, iconPayouts, betAmount);
+        const spinWin = winningLines.reduce((sum, line) => sum + line.win, 0);
+        grandTotalWin += spinWin;
+
+        spins.push({
+            spin_number: s + 1,
+            grid,
+            winning_lines: winningLines,
+            win: spinWin
+        });
     }
 
-    // Calculate all winning lines
-    const winningLines = calculateWinningLines(grid, icons, iconPayouts, betAmount);
-    const totalWin = winningLines.reduce((sum, line) => sum + line.win, 0);
-
-    // Deduct bet
+    // Deduct bet once
     const newBalance = player.balance - betAmount;
     await db.updateSlotPlayer(channelId, userId, newBalance, 0, betAmount, 0);
 
-    // Start game with result data
-    await db.startSlotGameWithLines(channelId, userId, username, betAmount, grid, winningLines, totalWin);
+    // Start game with all spins data
+    await db.startSlotGameWithFreespins(channelId, userId, username, betAmount, spinCount, spins, grandTotalWin);
 
     // Update player stats with total win
-    const finalBalance = newBalance + totalWin;
-    await db.updateSlotPlayer(channelId, userId, finalBalance, totalWin, 0, totalWin > (player.biggest_win || 0) ? totalWin : 0);
+    const finalBalance = newBalance + grandTotalWin;
+    await db.updateSlotPlayer(channelId, userId, finalBalance, grandTotalWin, 0, grandTotalWin > (player.biggest_win || 0) ? grandTotalWin : 0);
 
-    // End game after animation time
-    const animationTime = Math.max(3000, winningLines.length * 1500) + 2000;
+    // End game after animation time (2.5 sec per spin + 2 sec fade)
+    const animationTime = (spinCount * 2500) + 2000;
     setTimeout(async () => {
         await db.endSlotGame(channelId);
     }, animationTime);
 
-    // Return win message
+    // Return win/lose message
     const coinName = settings.coin_name || 'Coin';
-    if (totalWin > 0) {
-        const lineCount = winningLines.length;
-        return `🎰 @${username} ${lineCount} line'da ${totalWin.toLocaleString()} ${coinName} kazandı! 💰`;
+    if (grandTotalWin > 0) {
+        const winMsg = (settings.win_message || '🎰 @{username} {spin_count} freespin\'de {amount} {coin} kazandı! 💰')
+            .replace('{username}', username)
+            .replace('{spin_count}', spinCount)
+            .replace('{amount}', grandTotalWin.toLocaleString())
+            .replace('{coin}', coinName)
+            .replace('{bet}', betAmount.toLocaleString());
+        return winMsg;
     } else {
-        return `🎰 @${username} kazanamadı. Tekrar dene!`;
+        const loseMsg = (settings.lose_message || '🎰 @{username} {spin_count} freespin\'de kazanamadı. Tekrar dene!')
+            .replace('{username}', username)
+            .replace('{spin_count}', spinCount)
+            .replace('{bet}', betAmount.toLocaleString())
+            .replace('{coin}', coinName);
+        return loseMsg;
     }
 }
+
 
 
 

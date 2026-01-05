@@ -107,6 +107,15 @@
             border: 1px solid #8a5aba;
         }
 
+        .spin-counter {
+            background: linear-gradient(135deg, #2a5a4a, #1a3a2a);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 16px;
+            color: #00ff88;
+            border: 1px solid #4a8a6a;
+        }
+
         .slot-frame {
             background: linear-gradient(180deg, #1e0a3e, #0a0020);
             border: 4px solid #6a3a9a;
@@ -259,6 +268,7 @@
         <div class="player-bar">
             <span id="player-name" class="player-name">@Oyuncu</span>
             <div class="bet-info">
+                <span class="spin-counter">🎰 <span id="current-spin">1</span>/<span id="total-spins">5</span></span>
                 <span class="bet-amount">🎫 <span id="bet-amount">0</span></span>
             </div>
         </div>
@@ -366,7 +376,7 @@
             const cells = document.querySelectorAll('.slot-cell');
             cells.forEach(cell => cell.classList.add('spinning'));
 
-            const spinDuration = 2000;
+            const spinDuration = 1500;
             const spinStart = Date.now();
 
             while (Date.now() - spinStart < spinDuration) {
@@ -388,7 +398,7 @@
                 highlightWinningCells(line.line_positions);
                 showLineInfo(line, coinName);
 
-                await new Promise(r => setTimeout(r, 1200));
+                await new Promise(r => setTimeout(r, 800));
             }
 
             // Clear highlights at end
@@ -407,39 +417,86 @@
             }, 500);
         }
 
-        async function runGame(gameData, settings) {
-            isAnimating = true;
-            const result = gameData.result;
-            const grid = result.grid || [];
-            const winningLines = result.winning_lines || [];
-            const totalWin = result.total_win || 0;
-            const coinName = settings?.coin_name || 'Coin';
-
-            document.getElementById('total-win').textContent = '';
-            document.getElementById('coin-name').textContent = '';
+        // Animate single spin with 20-line check
+        async function animateSingleSpin(spinData, spinIndex, totalSpins, coinName) {
+            // Update spin counter
+            document.getElementById('current-spin').textContent = spinIndex + 1;
+            document.getElementById('total-spins').textContent = totalSpins;
 
             // Spin animation
             await spinAnimation();
 
             // Show final grid
             const cells = document.querySelectorAll('.slot-cell');
-            grid.forEach((icon, i) => {
+            spinData.grid.forEach((icon, i) => {
                 if (cells[i]) cells[i].innerHTML = renderIcon(icon);
             });
 
-            await new Promise(r => setTimeout(r, 500));
+            await new Promise(r => setTimeout(r, 300));
 
-            // Show each winning line
-            if (winningLines.length > 0) {
-                await showWinningLines(winningLines, coinName);
+            // Show winning lines for this spin
+            if (spinData.winning_lines && spinData.winning_lines.length > 0) {
+                await showWinningLines(spinData.winning_lines, coinName);
             }
 
-            // Show total
-            if (totalWin > 0) {
-                document.getElementById('total-win').textContent = `+${totalWin.toLocaleString()}`;
+            await new Promise(r => setTimeout(r, 200));
+        }
+
+        async function runGame(gameData, settings) {
+            isAnimating = true;
+            const result = gameData.result;
+            const coinName = settings?.coin_name || 'Coin';
+
+            // Check if it's freespin format (multiple spins)
+            if (result.spins && Array.isArray(result.spins)) {
+                const spins = result.spins;
+                const totalSpins = spins.length;
+                let runningTotal = 0;
+
+                for (let i = 0; i < totalSpins; i++) {
+                    await animateSingleSpin(spins[i], i, totalSpins, coinName);
+                    runningTotal += spins[i].win || 0;
+
+                    // Update running total
+                    if (runningTotal > 0) {
+                        document.getElementById('total-win').textContent = `+${runningTotal.toLocaleString()}`;
+                        document.getElementById('coin-name').textContent = coinName;
+                    }
+                }
+
+                // Show final total
+                const totalWin = result.total_win || 0;
+                if (totalWin > 0) {
+                    document.getElementById('total-win').textContent = `+${totalWin.toLocaleString()}`;
+                } else {
+                    document.getElementById('total-win').textContent = '0';
+                }
                 document.getElementById('coin-name').textContent = coinName;
+
             } else {
-                document.getElementById('total-win').textContent = '0';
+                // Old single-spin format (backward compatibility)
+                const grid = result.grid || [];
+                const winningLines = result.winning_lines || [];
+                const totalWin = result.total_win || 0;
+
+                await spinAnimation();
+
+                const cells = document.querySelectorAll('.slot-cell');
+                grid.forEach((icon, i) => {
+                    if (cells[i]) cells[i].innerHTML = renderIcon(icon);
+                });
+
+                await new Promise(r => setTimeout(r, 500));
+
+                if (winningLines.length > 0) {
+                    await showWinningLines(winningLines, coinName);
+                }
+
+                if (totalWin > 0) {
+                    document.getElementById('total-win').textContent = `+${totalWin.toLocaleString()}`;
+                } else {
+                    document.getElementById('total-win').textContent = '0';
+                }
                 document.getElementById('coin-name').textContent = coinName;
             }
 
@@ -474,6 +531,8 @@
 
                     document.getElementById('player-name').textContent = `@${data.game.username}`;
                     document.getElementById('bet-amount').textContent = data.game.bet_amount.toLocaleString();
+                    document.getElementById('total-win').textContent = '';
+                    document.getElementById('coin-name').textContent = '';
 
                     if (data.game.result) {
                         runGame(data.game, data.settings);
