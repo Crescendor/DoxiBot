@@ -21,7 +21,98 @@ const SUPER_ADMIN = (process.env.SUPER_ADMIN || 'doxish').toLowerCase();
 // Simple in-memory session store (for production, use Redis or DB)
 const sessions = new Map();
 
-// Slot game processor - Pragmatic Games style (each spin pays separately)
+// 20 Payline definitions for 5x4 grid (5 columns, 4 rows)
+// Grid layout: row0=[0,1,2,3,4], row1=[5,6,7,8,9], row2=[10,11,12,13,14], row3=[15,16,17,18,19]
+const PAYLINES = [
+    [0, 1, 2, 3, 4],       // Line 1: Top row
+    [5, 6, 7, 8, 9],       // Line 2: Second row
+    [10, 11, 12, 13, 14],  // Line 3: Third row
+    [15, 16, 17, 18, 19],  // Line 4: Bottom row
+    [0, 6, 12, 18, 14],    // Line 5: V shape down
+    [15, 11, 7, 3, 9],     // Line 6: V shape up
+    [0, 6, 7, 8, 4],       // Line 7: Slight dip top
+    [15, 11, 12, 13, 19],  // Line 8: Slight rise bottom
+    [5, 1, 2, 3, 9],       // Line 9: Upper zigzag
+    [10, 16, 17, 18, 14],  // Line 10: Lower zigzag
+    [5, 6, 2, 8, 9],       // Line 11: Peak up
+    [10, 11, 7, 13, 14],   // Line 12: Dip down
+    [0, 1, 7, 13, 19],     // Line 13: Diagonal down-right
+    [15, 16, 12, 8, 4],    // Line 14: Diagonal up-right
+    [5, 1, 7, 3, 9],       // Line 15: W shape top
+    [10, 16, 12, 18, 14],  // Line 16: W shape bottom
+    [0, 6, 2, 8, 4],       // Line 17: M shape top
+    [15, 11, 17, 13, 19],  // Line 18: M shape bottom
+    [5, 11, 7, 13, 9],     // Line 19: Diamond middle
+    [0, 11, 12, 13, 4],    // Line 20: Wide V
+];
+
+// Line colors for visual display
+const LINE_COLORS = [
+    '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF',
+    '#00FFFF', '#FF8000', '#8000FF', '#00FF80', '#FF0080',
+    '#80FF00', '#0080FF', '#FF4040', '#40FF40', '#4040FF',
+    '#FFFF80', '#FF80FF', '#80FFFF', '#FFA500', '#A500FF'
+];
+
+// Default icon payouts: icon -> { match3: payout, match4: payout, match5: payout }
+const DEFAULT_ICON_PAYOUTS = {
+    '🍒': { match3: 2, match4: 5, match5: 10 },
+    '🍋': { match3: 3, match4: 8, match5: 15 },
+    '🔔': { match3: 5, match4: 12, match5: 25 },
+    '⭐': { match3: 8, match4: 20, match5: 50 },
+    '💎': { match3: 15, match4: 40, match5: 100 },
+    '7️⃣': { match3: 25, match4: 75, match5: 250 }
+};
+
+// Calculate winning lines from a grid
+function calculateWinningLines(grid, icons, iconPayouts, betAmount) {
+    const winningLines = [];
+
+    for (let lineIndex = 0; lineIndex < PAYLINES.length; lineIndex++) {
+        const line = PAYLINES[lineIndex];
+        const symbols = line.map(pos => grid[pos]);
+
+        // Check for matches starting from left
+        const firstSymbol = symbols[0];
+        let matchCount = 1;
+
+        for (let i = 1; i < symbols.length; i++) {
+            if (symbols[i] === firstSymbol) {
+                matchCount++;
+            } else {
+                break;
+            }
+        }
+
+        // Need at least 3 matches to win
+        if (matchCount >= 3) {
+            const payout = iconPayouts[firstSymbol];
+            if (payout) {
+                let multiplier = 0;
+                if (matchCount === 3) multiplier = payout.match3 || 0;
+                else if (matchCount === 4) multiplier = payout.match4 || 0;
+                else if (matchCount >= 5) multiplier = payout.match5 || 0;
+
+                if (multiplier > 0) {
+                    const lineWin = Math.floor(betAmount * multiplier);
+                    winningLines.push({
+                        line_index: lineIndex,
+                        line_positions: line.slice(0, matchCount),
+                        symbol: firstSymbol,
+                        match_count: matchCount,
+                        multiplier: multiplier,
+                        win: lineWin,
+                        color: LINE_COLORS[lineIndex]
+                    });
+                }
+            }
+        }
+    }
+
+    return winningLines;
+}
+
+// Slot game processor - Classic 20-Line system
 async function processSlotCommand(channelId, message, betAmount, settings, db) {
     const userId = message.sender.user_id || message.sender.id;
     const username = message.sender.username;
@@ -43,103 +134,65 @@ async function processSlotCommand(channelId, message, betAmount, settings, db) {
     // Get or create player
     const player = await db.createOrGetSlotPlayer(channelId, userId, username, settings.start_balance);
 
-    // Total bet = betAmount * spin_count (each spin costs the same)
-    const spinCount = settings.spin_count || 5;
-    const totalBet = betAmount * spinCount;
-
-    // Check balance
-    if (player.balance < totalBet) {
-        return `💸 @${username} Yetersiz bakiye! (${spinCount} spin x ${betAmount} = ${totalBet.toLocaleString()} gerekli)`;
+    // Single bet deduction (not multiplied by spin count)
+    if (player.balance < betAmount) {
+        return `💸 @${username} Yetersiz bakiye! Bakiyen: ${player.balance.toLocaleString()} puan`;
     }
 
-    // Parse icons and multipliers
+    // Parse icons
     const icons = typeof settings.icons === 'string'
         ? JSON.parse(settings.icons)
         : (settings.icons || ['🍒', '🍋', '🔔', '⭐', '💎', '7️⃣']);
 
-    const multipliers = typeof settings.multipliers === 'string'
-        ? JSON.parse(settings.multipliers)
-        : (settings.multipliers || { '2': 40, '5': 25, '10': 15, '20': 10, '50': 7, '100': 3 });
+    // Parse icon payouts (or use defaults)
+    let iconPayouts = typeof settings.icon_payouts === 'string'
+        ? JSON.parse(settings.icon_payouts)
+        : (settings.icon_payouts || {});
 
-    // Generate all spins upfront (Pragmatic style - each spin independent)
-    const spins = [];
-    let totalWin = 0;
-
-    for (let i = 0; i < spinCount; i++) {
-        // Generate grid for this spin
-        const grid = [];
-        for (let j = 0; j < 20; j++) {
-            grid.push(icons[Math.floor(Math.random() * icons.length)]);
+    // Merge with defaults for any missing icons
+    for (const icon of icons) {
+        if (!iconPayouts[icon]) {
+            iconPayouts[icon] = DEFAULT_ICON_PAYOUTS[icon] || { match3: 2, match4: 5, match5: 10 };
         }
-
-        // Roll for multiplier
-        let roll = Math.random() * 100;
-        let multiplier = 0; // 0 means no win
-        const winChance = (settings.win_chance || 40) / 100; // Default 40% win chance
-        let hasWin = Math.random() < winChance;
-
-        if (hasWin) {
-            for (const [mult, weight] of Object.entries(multipliers).sort((a, b) => parseInt(a[0]) - parseInt(b[0]))) {
-                if (roll < weight) {
-                    multiplier = parseInt(mult);
-                    break;
-                }
-                roll -= weight;
-            }
-            if (multiplier === 0) multiplier = 2; // Default minimum
-        }
-
-        // Random cell positions for multiplier display (max 2 multipliers per spin)
-        const multiplierCells = [];
-        if (multiplier > 0) {
-            const numMultipliers = 1 + Math.floor(Math.random() * 2); // 1-2 multipliers
-            for (let m = 0; m < numMultipliers; m++) {
-                let pos = Math.floor(Math.random() * 20);
-                if (!multiplierCells.includes(pos)) {
-                    multiplierCells.push(pos);
-                }
-            }
-        }
-
-        const spinWin = multiplier > 0 ? betAmount * multiplier : 0;
-        totalWin += spinWin;
-
-        spins.push({
-            spin_number: i + 1,
-            grid,
-            multiplier,
-            multiplier_cells: multiplierCells,
-            win: spinWin
-        });
     }
 
-    // Deduct total bet
-    const newBalance = player.balance - totalBet;
-    await db.updateSlotPlayer(channelId, userId, newBalance, 0, totalBet, 0);
+    // Generate grid (5x4 = 20 cells)
+    const grid = [];
+    for (let i = 0; i < 20; i++) {
+        grid.push(icons[Math.floor(Math.random() * icons.length)]);
+    }
 
-    // Start game with all spins data
-    await db.startSlotGameWithSpins(channelId, userId, username, betAmount, spinCount, spins, totalWin);
+    // Calculate all winning lines
+    const winningLines = calculateWinningLines(grid, icons, iconPayouts, betAmount);
+    const totalWin = winningLines.reduce((sum, line) => sum + line.win, 0);
+
+    // Deduct bet
+    const newBalance = player.balance - betAmount;
+    await db.updateSlotPlayer(channelId, userId, newBalance, 0, betAmount, 0);
+
+    // Start game with result data
+    await db.startSlotGameWithLines(channelId, userId, username, betAmount, grid, winningLines, totalWin);
 
     // Update player stats with total win
     const finalBalance = newBalance + totalWin;
-    await db.updateSlotPlayer(channelId, userId, finalBalance, totalWin, 0, totalWin > player.biggest_win ? totalWin : 0);
+    await db.updateSlotPlayer(channelId, userId, finalBalance, totalWin, 0, totalWin > (player.biggest_win || 0) ? totalWin : 0);
 
-    // End game after animation time (2 sec per spin + 2 sec fade out)
-    const animationTime = (spinCount * 2500) + 2000;
+    // End game after animation time
+    const animationTime = Math.max(3000, winningLines.length * 1500) + 2000;
     setTimeout(async () => {
         await db.endSlotGame(channelId);
     }, animationTime);
 
     // Return win message
     const coinName = settings.coin_name || 'Coin';
-    const winMsg = (settings.win_message || '🎰 @{username} {amount} {coin} kazandı! 💰')
-        .replace('{username}', username)
-        .replace('{multiplier}', 'x')
-        .replace('{amount}', totalWin.toLocaleString())
-        .replace('{coin}', coinName);
-
-    return winMsg;
+    if (totalWin > 0) {
+        const lineCount = winningLines.length;
+        return `🎰 @${username} ${lineCount} line'da ${totalWin.toLocaleString()} ${coinName} kazandı! 💰`;
+    } else {
+        return `🎰 @${username} kazanamadı. Tekrar dene!`;
+    }
 }
+
 
 
 app.use(express.json());

@@ -59,12 +59,10 @@
             }
         }
 
-        /* Game Title Banner */
         .game-title-banner {
             background: linear-gradient(135deg, #ffd700, #ff8c00, #ffd700);
             padding: 12px 50px;
             border-radius: 30px 30px 0 0;
-            position: relative;
             z-index: 10;
             box-shadow: 0 5px 30px rgba(255, 215, 0, 0.5);
         }
@@ -78,7 +76,6 @@
             letter-spacing: 3px;
         }
 
-        /* Player Info */
         .player-bar {
             display: flex;
             justify-content: space-between;
@@ -110,59 +107,51 @@
             border: 1px solid #8a5aba;
         }
 
-        .spin-counter {
-            color: #a080c0;
-            font-size: 14px;
-        }
-
-        /* Slot Machine Frame */
         .slot-frame {
             background: linear-gradient(180deg, #1e0a3e, #0a0020);
             border: 4px solid #6a3a9a;
             border-top: none;
-            border-radius: 0 0 20px 20px;
             padding: 15px;
-            box-shadow:
-                0 20px 60px rgba(0, 0, 0, 0.8),
-                inset 0 0 100px rgba(106, 58, 154, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
             position: relative;
         }
 
-        /* Slot Grid */
+        .slot-grid-wrapper {
+            position: relative;
+            width: 490px;
+            height: 392px;
+        }
+
         .slot-grid {
             display: grid;
             grid-template-columns: repeat(5, 90px);
             grid-template-rows: repeat(4, 90px);
             gap: 8px;
             background: linear-gradient(180deg, #0d0020, #050010);
-            padding: 15px;
+            padding: 8px;
             border-radius: 15px;
             position: relative;
-            overflow: hidden;
         }
 
-        .slot-grid::before {
-            content: '';
+        #line-canvas {
             position: absolute;
-            inset: 0;
-            background: radial-gradient(ellipse at center, transparent 60%, rgba(0, 0, 0, 0.8));
+            top: 8px;
+            left: 8px;
             pointer-events: none;
+            z-index: 50;
         }
 
-        /* Slot Cell - Yuvarlak Kutucuk */
         .slot-cell {
             width: 90px;
             height: 90px;
             background: linear-gradient(145deg, #2a1a4a, #1a0a3a);
-            border-radius: 50%;
+            border-radius: 12px;
             display: flex;
             justify-content: center;
             align-items: center;
             font-size: 44px;
             border: 3px solid #4a2a7a;
-            box-shadow:
-                inset 0 -5px 15px rgba(0, 0, 0, 0.5),
-                0 5px 20px rgba(0, 0, 0, 0.4);
+            box-shadow: inset 0 -5px 15px rgba(0, 0, 0, 0.5);
             position: relative;
             transition: all 0.3s ease;
         }
@@ -191,10 +180,9 @@
 
         .slot-cell.winner {
             border-color: #ffd700;
-            box-shadow:
-                0 0 30px rgba(255, 215, 0, 0.8),
-                0 0 60px rgba(255, 215, 0, 0.4);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
             animation: winPulse 0.5s ease infinite alternate;
+            z-index: 60;
         }
 
         @keyframes winPulse {
@@ -203,61 +191,24 @@
             }
 
             to {
-                transform: scale(1.08);
+                transform: scale(1.05);
             }
         }
 
-        /* Multiplier on Cell - Gates of Olympus style */
-        .cell-multiplier {
+        .line-info {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 32px;
-            font-weight: 900;
-            color: #ffd700;
-            text-shadow:
-                0 0 10px #ffd700,
-                0 0 20px #ff8c00,
-                0 3px 6px rgba(0, 0, 0, 0.9);
-            z-index: 100;
-            animation: multiplierAppear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-            background: radial-gradient(circle, rgba(255, 140, 0, 0.8) 0%, transparent 70%);
-            padding: 10px;
-            border-radius: 50%;
-        }
-
-        @keyframes multiplierAppear {
-            0% {
-                transform: translate(-50%, -150%) scale(0.3);
-                opacity: 0;
-            }
-
-            60% {
-                transform: translate(-50%, -40%) scale(1.2);
-            }
-
-            100% {
-                transform: translate(-50%, -50%) scale(1);
-                opacity: 1;
-            }
-        }
-
-        /* Spin Win Display */
-        .spin-win-display {
-            position: absolute;
-            bottom: -50px;
+            bottom: -45px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 800;
             color: #00ff88;
             text-shadow: 0 0 15px #00ff88;
             white-space: nowrap;
-            animation: spinWinAppear 0.4s ease;
+            animation: lineInfoAppear 0.4s ease;
         }
 
-        @keyframes spinWinAppear {
+        @keyframes lineInfoAppear {
             from {
                 transform: translateX(-50%) scale(0.5);
                 opacity: 0;
@@ -269,7 +220,6 @@
             }
         }
 
-        /* Bottom Bar */
         .bottom-bar {
             display: flex;
             justify-content: center;
@@ -297,40 +247,30 @@
             color: #a080c0;
             font-size: 24px;
         }
-
-        /* No win display */
-        .no-win {
-            color: #666;
-            font-size: 20px;
-        }
     </style>
 </head>
 
 <body>
     <div id="slot-container" class="slot-container">
-        <!-- Title Banner -->
         <div class="game-title-banner">
             <div id="game-title" class="game-title">SLOT MAKİNESİ</div>
         </div>
 
-        <!-- Player Bar -->
         <div class="player-bar">
             <span id="player-name" class="player-name">@Oyuncu</span>
             <div class="bet-info">
                 <span class="bet-amount">🎫 <span id="bet-amount">0</span></span>
-                <span class="spin-counter">Spin <span id="current-spin">0</span>/<span id="total-spins">5</span></span>
             </div>
         </div>
 
-        <!-- Slot Frame -->
         <div class="slot-frame">
-            <div id="slot-grid" class="slot-grid">
-                <!-- 5x4 = 20 cells -->
+            <div class="slot-grid-wrapper">
+                <div id="slot-grid" class="slot-grid"></div>
+                <canvas id="line-canvas" width="474" height="376"></canvas>
             </div>
-            <div id="spin-win" class="spin-win-display" style="display: none;"></div>
+            <div id="line-info" class="line-info" style="display: none;"></div>
         </div>
 
-        <!-- Bottom Bar -->
         <div class="bottom-bar">
             <span id="total-win" class="total-win"></span>
             <span id="coin-name" class="coin-name"></span>
@@ -343,14 +283,21 @@
         let pollInterval = null;
         let icons = DEFAULT_ICONS;
         let isAnimating = false;
-        let currentSpinIndex = 0;
-        let runningTotalWin = 0;
 
-        // Get channel slug from URL
         const pathParts = window.location.pathname.split('/');
         const channelSlug = pathParts[1];
 
-        // Check if icon is URL or emoji
+        // Cell positions for drawing lines (center of each cell)
+        const CELL_SIZE = 90;
+        const GAP = 8;
+        function getCellCenter(index) {
+            const col = index % 5;
+            const row = Math.floor(index / 5);
+            const x = col * (CELL_SIZE + GAP) + CELL_SIZE / 2;
+            const y = row * (CELL_SIZE + GAP) + CELL_SIZE / 2;
+            return { x, y };
+        }
+
         function renderIcon(icon) {
             if (icon && (icon.startsWith('http://') || icon.startsWith('https://'))) {
                 return `<img src="${icon}" alt="icon">`;
@@ -358,7 +305,6 @@
             return icon || '❓';
         }
 
-        // Initialize grid
         function initGrid() {
             const grid = document.getElementById('slot-grid');
             grid.innerHTML = '';
@@ -371,112 +317,124 @@
             }
         }
 
-        // Show multiplier on specific cell (overlay on top of emoji)
-        function showMultiplierOnCell(cellIndex, multiplier) {
-            const cell = document.getElementById(`cell-${cellIndex}`);
-            if (cell) {
-                // Add multiplier overlay on top of emoji (don't replace emoji)
-                const multDiv = document.createElement('div');
-                multDiv.className = 'cell-multiplier';
-                multDiv.textContent = `${multiplier}x`;
-                cell.appendChild(multDiv);
-                cell.classList.add('winner');
-            }
+        function clearCanvas() {
+            const canvas = document.getElementById('line-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
-        // Show spin win
-        function showSpinWin(amount, coinName) {
-            const display = document.getElementById('spin-win');
-            if (amount > 0) {
-                display.textContent = `+${amount.toLocaleString()} ${coinName}`;
-                display.style.display = 'block';
-            } else {
-                display.style.display = 'none';
+        function drawLine(positions, color) {
+            const canvas = document.getElementById('line-canvas');
+            const ctx = canvas.getContext('2d');
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 15;
+
+            ctx.beginPath();
+            for (let i = 0; i < positions.length; i++) {
+                const center = getCellCenter(positions[i]);
+                if (i === 0) {
+                    ctx.moveTo(center.x, center.y);
+                } else {
+                    ctx.lineTo(center.x, center.y);
+                }
             }
+            ctx.stroke();
         }
 
-        // Animate single spin (Pragmatic style)
-        async function animateSpin(spinData, spinIndex, totalSpins, coinName) {
-            isAnimating = true;
-            const cells = document.querySelectorAll('.slot-cell');
-
-            // Update spin counter
-            document.getElementById('current-spin').textContent = spinIndex + 1;
-            document.getElementById('total-spins').textContent = totalSpins;
-
-            // Clear previous multipliers and winners (keep emoji, just remove multiplier overlay)
-            cells.forEach(cell => {
-                cell.classList.remove('winner');
-                const multDiv = cell.querySelector('.cell-multiplier');
-                if (multDiv) multDiv.remove();
-                cell.innerHTML = renderIcon(icons[Math.floor(Math.random() * icons.length)]);
+        function highlightWinningCells(positions) {
+            document.querySelectorAll('.slot-cell').forEach(cell => cell.classList.remove('winner'));
+            positions.forEach(pos => {
+                const cell = document.getElementById(`cell-${pos}`);
+                if (cell) cell.classList.add('winner');
             });
+        }
 
-            // Start spinning
+        function showLineInfo(lineData, coinName) {
+            const info = document.getElementById('line-info');
+            info.textContent = `${lineData.symbol} x${lineData.match_count} = +${lineData.win.toLocaleString()} ${coinName}`;
+            info.style.display = 'block';
+            info.style.color = lineData.color;
+            info.style.textShadow = `0 0 15px ${lineData.color}`;
+        }
+
+        async function spinAnimation() {
+            const cells = document.querySelectorAll('.slot-cell');
             cells.forEach(cell => cell.classList.add('spinning'));
 
-            // Spin for ~1.5 seconds
-            const spinDuration = 1500;
+            const spinDuration = 2000;
             const spinStart = Date.now();
 
             while (Date.now() - spinStart < spinDuration) {
                 cells.forEach(cell => {
-                    if (!cell.querySelector('.cell-multiplier')) {
-                        cell.innerHTML = renderIcon(icons[Math.floor(Math.random() * icons.length)]);
-                    }
+                    cell.innerHTML = renderIcon(icons[Math.floor(Math.random() * icons.length)]);
                 });
                 await new Promise(r => setTimeout(r, 80));
             }
 
-            // Stop spinning and show final grid
-            cells.forEach((cell, i) => {
-                cell.classList.remove('spinning');
-                if (spinData.grid && spinData.grid[i]) {
-                    cell.innerHTML = renderIcon(spinData.grid[i]);
-                }
-            });
-
-            // Wait a bit then show multipliers on cells
-            await new Promise(r => setTimeout(r, 300));
-
-            // Show multipliers on random cells if this spin won
-            if (spinData.multiplier > 0 && spinData.multiplier_cells) {
-                for (const cellIndex of spinData.multiplier_cells) {
-                    showMultiplierOnCell(cellIndex, spinData.multiplier);
-                }
-
-                // Update running total and show spin win
-                runningTotalWin += spinData.win;
-                showSpinWin(spinData.win, coinName);
-
-                // Update total display
-                document.getElementById('total-win').textContent = `+${runningTotalWin.toLocaleString()}`;
-                document.getElementById('coin-name').textContent = coinName;
-            } else {
-                showSpinWin(0, coinName);
-            }
-
-            // Wait before next spin
-            await new Promise(r => setTimeout(r, 800));
-
-            isAnimating = false;
+            cells.forEach(cell => cell.classList.remove('spinning'));
         }
 
-        // Run all spins sequentially
-        async function runAllSpins(gameData, settings) {
-            const spinsData = gameData.result?.spins || [];
+        async function showWinningLines(winningLines, coinName) {
+            for (let i = 0; i < winningLines.length; i++) {
+                const line = winningLines[i];
+
+                clearCanvas();
+                drawLine(line.line_positions, line.color);
+                highlightWinningCells(line.line_positions);
+                showLineInfo(line, coinName);
+
+                await new Promise(r => setTimeout(r, 1200));
+            }
+
+            // Clear highlights at end
+            clearCanvas();
+            document.querySelectorAll('.slot-cell').forEach(cell => cell.classList.remove('winner'));
+            document.getElementById('line-info').style.display = 'none';
+        }
+
+        function hideOverlay() {
+            const container = document.getElementById('slot-container');
+            container.classList.add('hiding');
+            setTimeout(() => {
+                container.classList.remove('visible', 'hiding');
+                currentGameData = null;
+                clearCanvas();
+            }, 500);
+        }
+
+        async function runGame(gameData, settings) {
+            isAnimating = true;
+            const result = gameData.result;
+            const grid = result.grid || [];
+            const winningLines = result.winning_lines || [];
+            const totalWin = result.total_win || 0;
             const coinName = settings?.coin_name || 'Coin';
-            runningTotalWin = 0;
 
             document.getElementById('total-win').textContent = '';
             document.getElementById('coin-name').textContent = '';
 
-            for (let i = 0; i < spinsData.length; i++) {
-                await animateSpin(spinsData[i], i, spinsData.length, coinName);
+            // Spin animation
+            await spinAnimation();
+
+            // Show final grid
+            const cells = document.querySelectorAll('.slot-cell');
+            grid.forEach((icon, i) => {
+                if (cells[i]) cells[i].innerHTML = renderIcon(icon);
+            });
+
+            await new Promise(r => setTimeout(r, 500));
+
+            // Show each winning line
+            if (winningLines.length > 0) {
+                await showWinningLines(winningLines, coinName);
             }
 
-            // Show final total
-            const totalWin = gameData.result?.total_win || 0;
+            // Show total
             if (totalWin > 0) {
                 document.getElementById('total-win').textContent = `+${totalWin.toLocaleString()}`;
                 document.getElementById('coin-name').textContent = coinName;
@@ -488,57 +446,37 @@
             // Hide after 2 seconds
             await new Promise(r => setTimeout(r, 2000));
             hideOverlay();
+            isAnimating = false;
         }
 
-        // Hide overlay with animation
-        function hideOverlay() {
-            const container = document.getElementById('slot-container');
-            container.classList.add('hiding');
-            setTimeout(() => {
-                container.classList.remove('visible', 'hiding');
-                currentGameData = null;
-                currentSpinIndex = 0;
-                runningTotalWin = 0;
-                document.getElementById('spin-win').style.display = 'none';
-            }, 500);
-        }
-
-        // Poll for game state
         async function pollState() {
             try {
                 const res = await fetch(`/api/channel/${channelSlug}/slot/state`);
                 const data = await res.json();
-
                 const container = document.getElementById('slot-container');
 
                 if (data.active && data.game && !isAnimating && !currentGameData) {
-                    // New game started
                     currentGameData = data.game;
 
-                    // Update icons from settings
-                    if (data.settings && data.settings.icons) {
+                    if (data.settings?.icons) {
                         icons = typeof data.settings.icons === 'string'
                             ? JSON.parse(data.settings.icons)
                             : data.settings.icons;
                     }
 
-                    // Update title
-                    if (data.settings && data.settings.game_name) {
+                    if (data.settings?.game_name) {
                         document.getElementById('game-title').textContent = data.settings.game_name.toUpperCase();
                     }
 
-                    // Show container
                     container.classList.remove('hiding');
                     container.classList.add('visible');
                     initGrid();
 
-                    // Update player info
                     document.getElementById('player-name').textContent = `@${data.game.username}`;
                     document.getElementById('bet-amount').textContent = data.game.bet_amount.toLocaleString();
 
-                    // Run all spins
-                    if (data.game.result && data.game.result.spins) {
-                        runAllSpins(data.game, data.settings);
+                    if (data.game.result) {
+                        runGame(data.game, data.settings);
                     }
                 }
             } catch (e) {
@@ -546,7 +484,6 @@
             }
         }
 
-        // Start polling
         initGrid();
         pollState();
         pollInterval = setInterval(pollState, 500);
