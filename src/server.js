@@ -22,30 +22,34 @@ const SUPER_ADMIN = (process.env.SUPER_ADMIN || 'doxish').toLowerCase();
 const sessions = new Map();
 
 // ============================================
-// GATES OF OLYMPUS - BONUS BUY FREESPIN SYSTEM
-// Bahis öde → 5 Freespin, Multiplier birikir
+// GATES OF OLYMPUS - BALANCED FREESPIN SYSTEM
+// 10 Tumble, 10 Sembol, Zor kazanç
 // ============================================
 
-// Default symbols with scatter pays multipliers (8+, 10+, 12+ symbols)
+// 10 symbols with scatter pays (10+, 12+, 15+ threshold - HARD to win)
 const DEFAULT_SCATTER_PAYOUTS = {
-    '👑': { s8: 50, s10: 100, s12: 250 },   // Crown - highest
-    '💎': { s8: 25, s10: 50, s12: 125 },    // Diamond
-    '⭐': { s8: 10, s10: 25, s12: 75 },     // Star
-    '🔔': { s8: 5, s10: 15, s12: 50 },      // Bell
-    '🍇': { s8: 3, s10: 10, s12: 30 },      // Grape
-    '🍒': { s8: 2, s10: 5, s12: 15 }        // Cherry - lowest
+    '👑': { s10: 8, s12: 15, s15: 40 },    // Crown - highest
+    '💎': { s10: 5, s12: 10, s15: 25 },    // Diamond
+    '🍀': { s10: 4, s12: 8, s15: 20 },     // Clover
+    '⭐': { s10: 3, s12: 6, s15: 15 },     // Star
+    '🔔': { s10: 2.5, s12: 5, s15: 12 },   // Bell
+    '🍊': { s10: 2, s12: 4, s15: 10 },     // Orange
+    '🍇': { s10: 1.5, s12: 3, s15: 8 },    // Grape
+    '🍋': { s10: 1.2, s12: 2.5, s15: 6 },  // Lemon
+    '🍒': { s10: 1, s12: 2, s15: 5 },      // Cherry
+    '🫐': { s10: 0.8, s12: 1.5, s15: 4 }   // Blueberry - lowest
 };
 
-// Multiplier orb values and their weights (probability)
+// Multiplier orb values (smaller, less impactful - tumble only)
 const MULTIPLIER_VALUES = [
-    { value: 2, weight: 35 },
+    { value: 2, weight: 60 },
     { value: 3, weight: 25 },
-    { value: 5, weight: 18 },
-    { value: 10, weight: 12 },
-    { value: 25, weight: 5 },
-    { value: 50, weight: 3 },
-    { value: 100, weight: 1.5 },
-    { value: 500, weight: 0.5 }
+    { value: 5, weight: 10 },
+    { value: 10, weight: 4 },
+    { value: 25, weight: 0.8 },
+    { value: 50, weight: 0.15 },
+    { value: 100, weight: 0.04 },
+    { value: 500, weight: 0.01 }
 ];
 
 // Generate random multiplier based on weights
@@ -68,21 +72,21 @@ function countSymbols(grid) {
     return counts;
 }
 
-// Find winning symbols (8+ of same) and their positions
+// Find winning symbols (10+ of same - HARD!) and their positions
 function findScatterWins(grid, scatterPayouts, betAmount) {
     const counts = countSymbols(grid);
     const wins = [];
 
     for (const [symbol, count] of Object.entries(counts)) {
-        if (count >= 8) {
+        // Minimum 10 symbols to win (very hard with 10 different symbols in 30 cells)
+        if (count >= 10) {
             const payout = scatterPayouts[symbol];
             if (payout) {
                 let multiplier = 0;
-                if (count >= 12) multiplier = payout.s12 || payout.s8 * 5;
-                else if (count >= 10) multiplier = payout.s10 || payout.s8 * 2;
-                else multiplier = payout.s8 || 1;
+                if (count >= 15) multiplier = payout.s15 || payout.s10 * 5;
+                else if (count >= 12) multiplier = payout.s12 || payout.s10 * 2;
+                else multiplier = payout.s10 || 1;
 
-                // Find positions of this symbol
                 const positions = [];
                 grid.forEach((s, i) => { if (s === symbol) positions.push(i); });
 
@@ -98,6 +102,7 @@ function findScatterWins(grid, scatterPayouts, betAmount) {
     }
     return wins;
 }
+
 
 // Remove winning symbols and drop new ones (tumble)
 function tumbleGrid(grid, winPositions, icons) {
@@ -131,8 +136,8 @@ function tumbleGrid(grid, winPositions, icons) {
     return newGrid;
 }
 
-// Simulate single spin with tumbles (returns all tumble data + spin total)
-function simulateSingleSpin(icons, scatterPayouts, betAmount, multiplierChance, cumulativeMultiplier) {
+// Simulate single spin with tumbles - multiplier ONLY for that tumble
+function simulateSingleSpin(icons, scatterPayouts, betAmount, multiplierChance) {
     const columns = 6;
     const rows = 5;
     const gridSize = columns * rows;
@@ -144,33 +149,34 @@ function simulateSingleSpin(icons, scatterPayouts, betAmount, multiplierChance, 
     }
 
     const tumbles = [];
-    let spinBaseWin = 0;
+    let spinTotalWin = 0;
     let tumbleCount = 0;
-    let newMultipliers = []; // Multipliers collected in this spin
-    const maxTumbles = 50;
+    const maxTumbles = 20; // Max cascade depth
 
     while (tumbleCount < maxTumbles) {
         const wins = findScatterWins(grid, scatterPayouts, betAmount);
 
         if (wins.length === 0) break;
 
-        // Generate multiplier orbs for this tumble (only when there's a win)
+        // Generate multiplier orbs for THIS tumble only (low chance)
         const multipliers = [];
+        let tumbleMultiplier = 1;
+
         if (Math.random() < multiplierChance) {
-            const orbCount = Math.random() < 0.2 ? 2 : 1;
-            for (let i = 0; i < orbCount; i++) {
-                const mult = {
-                    value: getRandomMultiplier(),
-                    position: Math.floor(Math.random() * gridSize)
-                };
-                multipliers.push(mult);
-                newMultipliers.push(mult.value);
-            }
+            const mult = {
+                value: getRandomMultiplier(),
+                position: Math.floor(Math.random() * gridSize)
+            };
+            multipliers.push(mult);
+            tumbleMultiplier = mult.value;
         }
 
-        // Base win from this tumble (before multiplier)
+        // Base win from this tumble
         const tumbleBaseWin = wins.reduce((sum, w) => sum + w.base_win, 0);
-        spinBaseWin += tumbleBaseWin;
+
+        // Apply tumble-only multiplier
+        const tumbleWin = Math.floor(tumbleBaseWin * tumbleMultiplier);
+        spinTotalWin += tumbleWin;
 
         // Get all winning positions
         const allWinPositions = [];
@@ -182,7 +188,9 @@ function simulateSingleSpin(icons, scatterPayouts, betAmount, multiplierChance, 
             grid: [...grid],
             wins,
             multipliers,
+            tumble_multiplier: tumbleMultiplier,
             base_win: tumbleBaseWin,
+            tumble_win: tumbleWin,
             removed_positions: uniquePositions
         });
 
@@ -197,45 +205,34 @@ function simulateSingleSpin(icons, scatterPayouts, betAmount, multiplierChance, 
         grid: [...grid],
         wins: [],
         multipliers: [],
+        tumble_multiplier: 1,
         base_win: 0,
+        tumble_win: 0,
         removed_positions: [],
         is_final: true
     });
 
     return {
         tumbles,
-        spin_base_win: spinBaseWin,
-        new_multipliers: newMultipliers,
+        spin_total_win: spinTotalWin,
         tumble_count: tumbleCount
     };
 }
 
-// Simulate full Bonus Buy freespin game (5 spins with cumulative multiplier)
+// Simulate 10 tumble game (no cumulative multiplier - each tumble has its own)
 function simulateBonusBuyGame(icons, scatterPayouts, betAmount, spinCount, multiplierChance) {
     const spins = [];
     let grandTotalWin = 0;
-    let cumulativeMultiplier = 1; // Starts at 1x, multipliers ADD to this
 
     for (let spinNum = 0; spinNum < spinCount; spinNum++) {
-        const spinResult = simulateSingleSpin(icons, scatterPayouts, betAmount, multiplierChance, cumulativeMultiplier);
+        const spinResult = simulateSingleSpin(icons, scatterPayouts, betAmount, multiplierChance);
 
-        // Add new multipliers to cumulative (they stack by addition)
-        const spinMultTotal = spinResult.new_multipliers.reduce((sum, m) => sum + m, 0);
-        if (spinMultTotal > 0) {
-            cumulativeMultiplier += spinMultTotal;
-        }
-
-        // Calculate spin win with cumulative multiplier applied
-        const spinWin = Math.floor(spinResult.spin_base_win * cumulativeMultiplier);
-        grandTotalWin += spinWin;
+        grandTotalWin += spinResult.spin_total_win;
 
         spins.push({
             spin_number: spinNum + 1,
             tumbles: spinResult.tumbles,
-            spin_base_win: spinResult.spin_base_win,
-            new_multipliers: spinResult.new_multipliers,
-            cumulative_multiplier: cumulativeMultiplier,
-            spin_win: spinWin,
+            spin_win: spinResult.spin_total_win,
             tumble_count: spinResult.tumble_count
         });
     }
@@ -243,14 +240,14 @@ function simulateBonusBuyGame(icons, scatterPayouts, betAmount, spinCount, multi
     return {
         spins,
         grand_total_win: grandTotalWin,
-        final_multiplier: cumulativeMultiplier,
         spin_count: spinCount
     };
 }
 
 
 
-// Slot game processor - Bonus Buy Freespin (5 spin, cumulative multiplier)
+
+// Slot game processor - 10 Tumble Freespin (balanced, hard to win)
 async function processSlotCommand(channelId, message, betAmount, settings, db) {
     const userId = message.sender.user_id || message.sender.id;
     const username = message.sender.username;
@@ -277,10 +274,10 @@ async function processSlotCommand(channelId, message, betAmount, settings, db) {
         return `💸 @${username} Yetersiz bakiye! Bakiyen: ${player.balance.toLocaleString()} puan`;
     }
 
-    // Parse icons (6 symbols)
+    // Parse icons (10 symbols for balanced game)
     const icons = typeof settings.icons === 'string'
         ? JSON.parse(settings.icons)
-        : (settings.icons || ['👑', '💎', '⭐', '🔔', '🍇', '🍒']);
+        : (settings.icons || ['👑', '💎', '🍀', '⭐', '🔔', '🍊', '🍇', '🍋', '🍒', '🫐']);
 
     // Parse scatter payouts
     let scatterPayouts = typeof settings.icon_payouts === 'string'
@@ -290,33 +287,33 @@ async function processSlotCommand(channelId, message, betAmount, settings, db) {
     // Merge with defaults
     for (const icon of icons) {
         if (!scatterPayouts[icon]) {
-            scatterPayouts[icon] = DEFAULT_SCATTER_PAYOUTS[icon] || { s8: 2, s10: 5, s12: 10 };
+            scatterPayouts[icon] = DEFAULT_SCATTER_PAYOUTS[icon] || { s10: 1, s12: 2, s15: 5 };
         }
     }
 
-    // Freespin count (default 5)
-    const spinCount = settings.spin_count || 5;
+    // Tumble count (default 10)
+    const spinCount = settings.spin_count || 10;
 
-    // Multiplier chance (default 40%)
-    const multiplierChance = (settings.win_chance || 40) / 100;
+    // Multiplier chance (default 15% - very low)
+    const multiplierChance = (settings.win_chance || 15) / 100;
 
-    // Simulate Bonus Buy freespin game
+    // Simulate game
     const gameResult = simulateBonusBuyGame(icons, scatterPayouts, betAmount, spinCount, multiplierChance);
-    const { spins, grand_total_win, final_multiplier, spin_count } = gameResult;
+    const { spins, grand_total_win, spin_count } = gameResult;
 
     // Deduct bet
     const newBalance = player.balance - betAmount;
     await db.updateSlotPlayer(channelId, userId, newBalance, 0, betAmount, 0);
 
     // Start game with freespin data
-    await db.startSlotGameWithBonusBuy(channelId, userId, username, betAmount, spins, grand_total_win, final_multiplier);
+    await db.startSlotGameWithBonusBuy(channelId, userId, username, betAmount, spins, grand_total_win, 1);
 
     // Update player stats with total win
     const finalBalance = newBalance + grand_total_win;
     await db.updateSlotPlayer(channelId, userId, finalBalance, grand_total_win, 0, grand_total_win > (player.biggest_win || 0) ? grand_total_win : 0);
 
-    // End game after animation time (3 sec per spin + 3 sec fade)
-    const animationTime = (spinCount * 3000) + 3000;
+    // End game after animation time (2 sec per spin + 2 sec fade)
+    const animationTime = (spinCount * 2000) + 2000;
     setTimeout(async () => {
         await db.endSlotGame(channelId);
     }, animationTime);
@@ -324,16 +321,15 @@ async function processSlotCommand(channelId, message, betAmount, settings, db) {
     // Return win/lose message
     const coinName = settings.coin_name || 'Coin';
     if (grand_total_win > 0) {
-        const winMsg = (settings.win_message || '⚡ @{username} {spin_count} freespin sonucu {final_mult}x çarpan ile {amount} {coin} kazandı! 💰')
+        const winMsg = (settings.win_message || '⚡ @{username} {spin_count} tumble sonucu {amount} {coin} kazandı! 💰')
             .replace('{username}', username)
             .replace('{spin_count}', spinCount)
-            .replace('{final_mult}', final_multiplier)
             .replace('{amount}', grand_total_win.toLocaleString())
             .replace('{coin}', coinName)
             .replace('{bet}', betAmount.toLocaleString());
         return winMsg;
     } else {
-        const loseMsg = (settings.lose_message || '⚡ @{username} {spin_count} freespin\'de kazanamadı. Tekrar dene!')
+        const loseMsg = (settings.lose_message || '⚡ @{username} {spin_count} tumble\'da kazanamadı. Tekrar dene!')
             .replace('{username}', username)
             .replace('{spin_count}', spinCount)
             .replace('{bet}', betAmount.toLocaleString())
@@ -341,6 +337,7 @@ async function processSlotCommand(channelId, message, betAmount, settings, db) {
         return loseMsg;
     }
 }
+
 
 
 

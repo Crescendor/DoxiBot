@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bonus Buy Freespin</title>
+    <title>10 Tumble Slot</title>
     <style>
         * {
             margin: 0;
@@ -29,7 +29,7 @@
             flex-direction: column;
             align-items: center;
             width: 680px;
-            animation: containerAppear 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            animation: containerAppear 0.5s ease;
         }
 
         .slot-container.visible {
@@ -37,12 +37,12 @@
         }
 
         .slot-container.hiding {
-            animation: containerDisappear 0.5s ease-in forwards;
+            animation: containerDisappear 0.4s ease-in forwards;
         }
 
         @keyframes containerAppear {
             from {
-                transform: scale(0.7) translateY(50px);
+                transform: scale(0.8) translateY(30px);
                 opacity: 0;
             }
 
@@ -54,54 +54,24 @@
 
         @keyframes containerDisappear {
             to {
-                transform: scale(0.8) translateY(-30px);
+                transform: scale(0.9) translateY(-20px);
                 opacity: 0;
             }
         }
 
         .game-title-banner {
             background: linear-gradient(135deg, #1a237e, #4a148c, #1a237e);
-            padding: 12px 50px;
-            border-radius: 30px 30px 0 0;
-            box-shadow: 0 5px 30px rgba(74, 20, 140, 0.5);
-            position: relative;
-        }
-
-        .game-title-banner::before,
-        .game-title-banner::after {
-            content: '⚡';
-            font-size: 28px;
-            position: absolute;
-            animation: lightning 1.5s infinite;
-        }
-
-        .game-title-banner::before {
-            left: 15px;
-        }
-
-        .game-title-banner::after {
-            right: 15px;
-            animation-delay: 0.5s;
-        }
-
-        @keyframes lightning {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.3;
-            }
+            padding: 10px 40px;
+            border-radius: 25px 25px 0 0;
+            box-shadow: 0 5px 25px rgba(74, 20, 140, 0.4);
         }
 
         .game-title {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 800;
             color: #ffd700;
             text-transform: uppercase;
-            text-shadow: 0 0 20px #ffd700;
+            text-shadow: 0 0 15px #ffd700;
             letter-spacing: 2px;
         }
 
@@ -110,13 +80,13 @@
             justify-content: space-between;
             align-items: center;
             width: 100%;
-            padding: 10px 20px;
+            padding: 8px 16px;
             background: linear-gradient(180deg, #1a237e, #0d1442);
             border: 2px solid #3949ab;
         }
 
         .player-name {
-            font-size: 18px;
+            font-size: 16px;
             color: #ffd700;
             font-weight: 600;
         }
@@ -124,14 +94,14 @@
         .bet-info {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
 
         .info-box {
             background: linear-gradient(135deg, #283593, #1a237e);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 13px;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 12px;
             border: 1px solid #3f51b5;
         }
 
@@ -139,10 +109,9 @@
             color: #00e5ff;
         }
 
-        .multiplier-display {
+        .tumble-mult {
             color: #ff4081;
-            font-weight: 800;
-            font-size: 16px;
+            font-weight: 700;
         }
 
         .bet-amount {
@@ -151,46 +120,46 @@
 
         .slot-frame {
             background: linear-gradient(180deg, #0d1442, #050820);
-            border: 4px solid #3949ab;
+            border: 3px solid #3949ab;
             border-top: none;
-            padding: 12px;
+            padding: 10px;
             position: relative;
         }
 
         .slot-grid {
             display: grid;
-            grid-template-columns: repeat(6, 75px);
-            grid-template-rows: repeat(5, 75px);
-            gap: 5px;
+            grid-template-columns: repeat(6, 70px);
+            grid-template-rows: repeat(5, 70px);
+            gap: 4px;
             background: linear-gradient(180deg, #0a0f30, #050820);
-            padding: 6px;
-            border-radius: 12px;
+            padding: 5px;
+            border-radius: 10px;
         }
 
         .slot-cell {
-            width: 75px;
-            height: 75px;
+            width: 70px;
+            height: 70px;
             background: linear-gradient(145deg, #1a237e, #0d1442);
-            border-radius: 8px;
+            border-radius: 6px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 36px;
+            font-size: 32px;
             border: 2px solid #3949ab;
             position: relative;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
 
         .slot-cell img {
-            width: 50px;
-            height: 50px;
+            width: 45px;
+            height: 45px;
             object-fit: contain;
         }
 
         .slot-cell.winning {
             border-color: #ffd700;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
-            animation: winGlow 0.4s ease infinite alternate;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
+            animation: winGlow 0.3s ease infinite alternate;
         }
 
         @keyframes winGlow {
@@ -199,12 +168,12 @@
             }
 
             to {
-                transform: scale(1.06);
+                transform: scale(1.04);
             }
         }
 
         .slot-cell.removing {
-            animation: removeSymbol 0.35s ease forwards;
+            animation: removeSymbol 0.25s ease forwards;
         }
 
         @keyframes removeSymbol {
@@ -215,12 +184,12 @@
         }
 
         .slot-cell.dropping {
-            animation: dropSymbol 0.35s ease;
+            animation: dropSymbol 0.25s ease;
         }
 
         @keyframes dropSymbol {
             from {
-                transform: translateY(-80px);
+                transform: translateY(-70px);
                 opacity: 0;
             }
 
@@ -232,27 +201,25 @@
 
         .multiplier-orb {
             position: absolute;
-            top: 3px;
-            right: 3px;
+            top: 2px;
+            right: 2px;
             background: linear-gradient(135deg, #ffd700, #ff8c00);
             color: #000;
-            font-size: 12px;
+            font-size: 10px;
             font-weight: 800;
-            padding: 2px 6px;
-            border-radius: 10px;
-            animation: orbPulse 0.4s ease infinite alternate;
+            padding: 2px 5px;
+            border-radius: 8px;
+            animation: orbPulse 0.3s ease infinite alternate;
             z-index: 10;
         }
 
         @keyframes orbPulse {
             from {
                 transform: scale(1);
-                box-shadow: 0 0 8px #ffd700;
             }
 
             to {
                 transform: scale(1.1);
-                box-shadow: 0 0 15px #ffd700;
             }
         }
 
@@ -261,10 +228,10 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 42px;
+            font-size: 36px;
             font-weight: 800;
             color: #ffd700;
-            text-shadow: 0 0 30px #ffd700;
+            text-shadow: 0 0 25px #ffd700;
             z-index: 100;
             display: none;
         }
@@ -273,17 +240,17 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
             width: 100%;
-            padding: 12px;
+            padding: 10px;
             background: linear-gradient(180deg, #0d1442, #050820);
-            border-radius: 0 0 20px 20px;
-            border: 4px solid #3949ab;
+            border-radius: 0 0 15px 15px;
+            border: 3px solid #3949ab;
             border-top: none;
         }
 
         .total-win {
-            font-size: 38px;
+            font-size: 32px;
             font-weight: 800;
             background: linear-gradient(90deg, #ffd700, #ff8c00);
             background-clip: text;
@@ -293,7 +260,7 @@
 
         .coin-name {
             color: #7986cb;
-            font-size: 22px;
+            font-size: 18px;
         }
     </style>
 </head>
@@ -301,15 +268,15 @@
 <body>
     <div id="slot-container" class="slot-container">
         <div class="game-title-banner">
-            <div id="game-title" class="game-title">BONUS BUY FREESPIN</div>
+            <div id="game-title" class="game-title">10 TUMBLE SLOT</div>
         </div>
 
         <div class="player-bar">
             <span id="player-name" class="player-name">@Oyuncu</span>
             <div class="bet-info">
                 <span class="info-box spin-counter">🎰 <span id="current-spin">1</span>/<span
-                        id="total-spins">5</span></span>
-                <span class="info-box multiplier-display">⚡ <span id="cumulative-mult">1</span>x</span>
+                        id="total-spins">10</span></span>
+                <span class="info-box tumble-mult">⚡ <span id="tumble-mult">1</span>x</span>
                 <span class="info-box bet-amount">🎫 <span id="bet-amount">0</span></span>
             </div>
         </div>
@@ -326,7 +293,7 @@
     </div>
 
     <script>
-        const DEFAULT_ICONS = ['👑', '💎', '⭐', '🔔', '🍇', '🍒'];
+        const DEFAULT_ICONS = ['👑', '💎', '🍀', '⭐', '🔔', '🍊', '🍇', '🍋', '🍒', '🫐'];
         let currentGameData = null;
         let pollInterval = null;
         let icons = DEFAULT_ICONS;
@@ -369,7 +336,7 @@
                 if (cell) {
                     const orb = document.createElement('div');
                     orb.className = 'multiplier-orb';
-                    orb.textContent = `+${mult.value}x`;
+                    orb.textContent = `${mult.value}x`;
                     cell.appendChild(orb);
                 }
             });
@@ -380,28 +347,14 @@
                 const cell = document.getElementById(`cell-${pos}`);
                 if (cell) cell.classList.add('removing');
             });
-            await new Promise(r => setTimeout(r, 350));
-        }
-
-        async function animateDrop(newGrid) {
-            const cells = document.querySelectorAll('.slot-cell');
-            cells.forEach((cell, i) => {
-                cell.classList.remove('removing', 'winning');
-                cell.innerHTML = renderIcon(newGrid[i]);
-                cell.classList.add('dropping');
-            });
-            await new Promise(r => setTimeout(r, 350));
-            cells.forEach(cell => cell.classList.remove('dropping'));
+            await new Promise(r => setTimeout(r, 250));
         }
 
         function showWinPopup(amount) {
             const popup = document.getElementById('win-popup');
             popup.textContent = `+${amount.toLocaleString()}`;
             popup.style.display = 'block';
-            popup.style.animation = 'none';
-            popup.offsetHeight;
-            popup.style.animation = 'popIn 0.4s ease';
-            setTimeout(() => popup.style.display = 'none', 800);
+            setTimeout(() => popup.style.display = 'none', 600);
         }
 
         function hideOverlay() {
@@ -410,13 +363,17 @@
             setTimeout(() => {
                 container.classList.remove('visible', 'hiding');
                 currentGameData = null;
-            }, 500);
+            }, 400);
         }
 
-        // Animate a single tumble within a spin
+        // Animate a single tumble
         async function animateTumble(tumble, coinName) {
             createGrid(tumble.grid);
-            await new Promise(r => setTimeout(r, 200));
+
+            // Update tumble multiplier display
+            document.getElementById('tumble-mult').textContent = tumble.tumble_multiplier || 1;
+
+            await new Promise(r => setTimeout(r, 150));
 
             if (tumble.wins && tumble.wins.length > 0) {
                 const allPositions = [];
@@ -427,29 +384,29 @@
                     showMultipliers(tumble.multipliers);
                 }
 
-                await new Promise(r => setTimeout(r, 500));
+                await new Promise(r => setTimeout(r, 350));
+
+                // Show tumble win
+                if (tumble.tumble_win > 0) {
+                    showWinPopup(tumble.tumble_win);
+                }
 
                 if (!tumble.is_final && tumble.removed_positions.length > 0) {
                     await animateRemove(tumble.removed_positions);
                 }
             }
+
+            await new Promise(r => setTimeout(r, 100));
         }
 
         // Animate a single spin (all its tumbles)
         async function animateSpin(spin, spinIndex, totalSpins, coinName) {
             document.getElementById('current-spin').textContent = spinIndex + 1;
             document.getElementById('total-spins').textContent = totalSpins;
-            document.getElementById('cumulative-mult').textContent = spin.cumulative_multiplier;
+            document.getElementById('tumble-mult').textContent = '1';
 
             for (const tumble of spin.tumbles) {
                 await animateTumble(tumble, coinName);
-                await new Promise(r => setTimeout(r, 150));
-            }
-
-            // Show spin win if any
-            if (spin.spin_win > 0) {
-                showWinPopup(spin.spin_win);
-                await new Promise(r => setTimeout(r, 600));
             }
         }
 
@@ -475,7 +432,7 @@
                     document.getElementById('coin-name').textContent = coinName;
                 }
 
-                await new Promise(r => setTimeout(r, 400));
+                await new Promise(r => setTimeout(r, 200));
             }
 
             // Final display
@@ -486,7 +443,7 @@
             }
             document.getElementById('coin-name').textContent = coinName;
 
-            await new Promise(r => setTimeout(r, 2500));
+            await new Promise(r => setTimeout(r, 2000));
             hideOverlay();
             isAnimating = false;
         }
@@ -517,8 +474,8 @@
                     document.getElementById('player-name').textContent = `@${data.game.username}`;
                     document.getElementById('bet-amount').textContent = data.game.bet_amount.toLocaleString();
                     document.getElementById('current-spin').textContent = '1';
-                    document.getElementById('total-spins').textContent = data.game.total_spins || '5';
-                    document.getElementById('cumulative-mult').textContent = '1';
+                    document.getElementById('total-spins').textContent = data.game.total_spins || '10';
+                    document.getElementById('tumble-mult').textContent = '1';
                     document.getElementById('total-win').textContent = '';
                     document.getElementById('coin-name').textContent = '';
 
