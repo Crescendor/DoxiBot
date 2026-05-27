@@ -203,13 +203,8 @@ export async function processCustomCommand(channelId, command, message) {
         const parts = message.content.split(' ');
         const userArgs = parts.slice(1).join(' ').trim();
         
-        let aiPrompt = response;
-        if (userArgs) {
-            aiPrompt += `\n\nKullanıcı Sorusu: ${userArgs}`;
-        }
-        aiPrompt += `\n\n(Önemli: Cevabın en fazla 350 karakter olsun ve tek bir paragrafta yaz.)`;
-        
-        response = await generateAIResponse(aiPrompt);
+        const userPrompt = userArgs || "Merhaba! Kendini kısaca tanıt ve maceracılara selam ver.";
+        response = await generateAIResponse(userPrompt, response);
     }
 
     // Increment use count
@@ -235,10 +230,17 @@ function getRandomSemanticSeed(count = 3) {
     return shuffled.slice(0, count).join(', ');
 }
 
-async function generateAIResponse(prompt) {
+async function generateAIResponse(userPrompt, systemPrompt = null) {
     try {
         const words = getRandomSemanticSeed(3);
-        const randomizedPrompt = `${prompt}\n\n(Not: Bu mesaja cevap verirken veya üslubunu belirlerken şu kelimelerden ilham alabilirsin veya tamamen farklı yazabilirsin: ${words})`;
+        const randomizedUserPrompt = `${userPrompt}\n\n(Not: Bu mesaja cevap verirken veya üslubunu belirlerken şu kelimelerden ilham alabilirsin veya tamamen farklı yazabilirsin: ${words})`;
+
+        const messages = [];
+        if (systemPrompt) {
+            const fullSystemPrompt = `${systemPrompt}\n\n(Önemli: Cevabın en fazla 350 karakter olsun, tek bir paragrafta yaz ve doğrudan sohbet dilinde samimi bir şekilde cevap ver.)`;
+            messages.push({ role: 'system', content: fullSystemPrompt });
+        }
+        messages.push({ role: 'user', content: randomizedUserPrompt });
 
         const response = await fetch('https://api.llm7.io/v1/chat/completions', {
             method: 'POST',
@@ -248,7 +250,7 @@ async function generateAIResponse(prompt) {
             },
             body: JSON.stringify({
                 model: 'grok-3-mini-high',
-                messages: [{ role: 'user', content: randomizedPrompt }]
+                messages: messages
             })
         });
         if (!response.ok) throw new Error(`AI API error: ${response.status} ${response.statusText}`);
