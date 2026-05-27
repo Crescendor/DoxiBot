@@ -218,30 +218,20 @@ export async function processCustomCommand(channelId, command, message) {
     };
 }
 
-const RANDOM_WORDS = [
-    'güneş', 'rüzgar', 'bulut', 'yıldız', 'deniz', 'yaprak', 'çiçek', 'nehir', 'orman', 'toprak',
-    'sevgi', 'neşe', 'huzur', 'umut', 'hayal', 'rüya', 'macera', 'dostluk', 'tebessüm', 'kahkaha',
-    'kahve', 'kitap', 'şarkı', 'masal', 'ışık', 'gölge', 'renk', 'uyum', 'sır', 'bilgelik',
-    'zaman', 'yolculuk', 'adım', 'başlangıç', 'keşif', 'anlar', 'melodi', 'fısıltı', 'yankı', 'radyo',
-    'gece', 'gündüz', 'bahar', 'yaz', 'sonbahar', 'kış', 'ateş', 'su', 'hava', 'kıvılcım'
-];
-
-function getRandomSemanticSeed(count = 3) {
-    const shuffled = [...RANDOM_WORDS].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, count).join(', ');
-}
-
 async function generateAIResponse(userPrompt, systemPrompt = null) {
     try {
-        const words = getRandomSemanticSeed(3);
-        const randomizedUserPrompt = `${userPrompt}\n\n(Not: Bu mesaja cevap verirken veya üslubunu belirlerken şu kelimelerden ilham alabilirsin veya tamamen farklı yazabilirsin: ${words})`;
-
         const messages = [];
         if (systemPrompt) {
             const fullSystemPrompt = `${systemPrompt}\n\n(Önemli: Cevabın en fazla 350 karakter olsun, tek bir paragrafta yaz ve doğrudan sohbet dilinde samimi bir şekilde cevap ver.)`;
             messages.push({ role: 'system', content: fullSystemPrompt });
         }
-        messages.push({ role: 'user', content: randomizedUserPrompt });
+
+        // Enforce system instructions directly inside user message to guarantee compliance on all API proxy platforms
+        const combinedUserPrompt = systemPrompt
+            ? `Sistem Talimatları:\n${systemPrompt}\n\n(Önemli: Cevabın en fazla 350 karakter olsun, tek bir paragrafta yaz ve doğrudan sohbet dilinde samimi bir şekilde cevap ver.)\n\nKullanıcı Sorusu: ${userPrompt}`
+            : userPrompt;
+
+        messages.push({ role: 'user', content: combinedUserPrompt });
 
         const response = await fetch('https://api.llm7.io/v1/chat/completions', {
             method: 'POST',

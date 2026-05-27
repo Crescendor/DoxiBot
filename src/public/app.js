@@ -180,11 +180,8 @@ function navigateTo(page, pushHistory = true) {
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === `page-${page}`));
 
   const titles = {
-    dashboard: 'Dashboard', commands: '🎮 Oyun Komutları', players: '👥 Oyuncular',
-    leaderboard: '🏆 Sıralama', chat: '📝 Chat Log', test: '🧪 Test',
+    dashboard: 'Dashboard', chat: '📝 Chat Log', test: '🧪 Test',
     customcmds: '💬 Özel Komutlar', pools: '🎲 Havuzlar',
-    items: '🎒 Eşyalar', monsters: '👹 Canavarlar', quests: '📋 Görevler',
-    shop: '🏪 Dükkan', pshop: '💎 Premium Dükkan', settings: '⏱️ Oyun Ayarları',
     channels: '📺 Tüm Kanallar', setup: '⚙️ Kurulum', suggestions: '💡 Öneriler'
   };
   document.getElementById('page-title').textContent = titles[page] || page;
@@ -198,24 +195,12 @@ function navigateTo(page, pushHistory = true) {
     history.pushState({ page }, titles[page] || page, newUrl);
   }
 
-  if (page === 'commands') loadCommands();
-  if (page === 'players') loadPlayers();
-  if (page === 'leaderboard') loadLeaderboard();
   if (page === 'chat') loadChatLog();
   if (page === 'channels') loadChannels();
-  if (page === 'dashboard') { loadDashboard(); loadGameStatus(); }
-  if (page === 'items') loadItems();
-  if (page === 'monsters') loadMonsters();
-  if (page === 'quests') loadQuests();
-  if (page === 'shop') loadShop();
-  if (page === 'pshop') loadPremiumShop();
-  if (page === 'settings') loadSettings();
+  if (page === 'dashboard') loadDashboard();
   if (page === 'customcmds') loadCustomCommands();
   if (page === 'pools') loadPools();
   if (page === 'suggestions') loadSuggestions();
-  if (page === 'rpg') loadRPGStatus();
-  if (page === 'slot') loadSlotSettings();
-  if (page === 'slotleaderboard') loadSlotLeaderboard();
 }
 
 async function loadStatus() {
@@ -247,39 +232,34 @@ async function loadStatus() {
 
 async function loadDashboard() {
   if (!currentChannelId) {
-    document.getElementById('stat-players').textContent = '0';
-    document.getElementById('stat-battles').textContent = '0';
-    document.getElementById('stat-level').textContent = '0';
-    document.getElementById('stat-fishing').textContent = '0';
-    document.getElementById('top-players').innerHTML = '<div class="empty-state">Kanal seçin</div>';
+    document.getElementById('stat-commands-count').textContent = '0';
+    document.getElementById('stat-pools-count').textContent = '0';
+    document.getElementById('stat-suggestions-count').textContent = '0';
+    document.getElementById('stat-uses-count').textContent = '0';
     return;
   }
 
   try {
-    const res = await fetch(`/api/channel/${currentChannelId}/status`);
-    const data = await res.json();
+    // Load Custom Commands to count and sum uses
+    const cmdRes = await fetch(`/api/admin/channel/${currentChannelId}/custom-commands`);
+    const cmds = await cmdRes.json();
+    document.getElementById('stat-commands-count').textContent = cmds.length || 0;
 
-    document.getElementById('stat-players').textContent = data.stats?.totalPlayers || 0;
-    document.getElementById('stat-battles').textContent = data.stats?.totalBattles || 0;
-    document.getElementById('stat-level').textContent = data.stats?.highestLevel || 0;
-    document.getElementById('stat-fishing').textContent = data.stats?.activeFishing || 0;
+    const totalUses = cmds.reduce((sum, c) => sum + (c.use_count || 0), 0);
+    document.getElementById('stat-uses-count').textContent = totalUses || 0;
 
-    // Top players
-    const lbRes = await fetch(`/api/channel/${currentChannelId}/leaderboard`);
-    const leaderboard = await lbRes.json();
+    // Load Pools
+    const poolsRes = await fetch(`/api/admin/channel/${currentChannelId}/pools`);
+    const pools = await poolsRes.json();
+    document.getElementById('stat-pools-count').textContent = pools.length || 0;
 
-    const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
-    document.getElementById('top-players').innerHTML = leaderboard.length > 0 ? leaderboard.slice(0, 5).map((p, i) => `
-      <div class="player-item">
-        <div class="player-rank">${medals[i]}</div>
-        <div class="player-info"><div class="player-name">${esc(p.username)}</div><div class="player-stats">Lv.${p.level} | ${p.doxigem || 0}💎</div></div>
-        <div class="player-gold">${p.gold}💰</div>
-      </div>
-    `).join('') : '<div class="empty-state">Henüz oyuncu yok</div>';
-
-    // Load game status
-    loadGameStatus();
-  } catch (e) { console.error('Dashboard error:', e); }
+    // Load Suggestions
+    const sugRes = await fetch(`/api/admin/channel/${currentChannelId}/suggestions?limit=1`);
+    const sugData = await sugRes.json();
+    document.getElementById('stat-suggestions-count').textContent = sugData.total || 0;
+  } catch (e) {
+    console.error('Dashboard load error:', e);
+  }
 }
 
 // ========== COMMANDS ==========

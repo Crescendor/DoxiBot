@@ -564,73 +564,8 @@ app.post('/webhook', async (req, res) => {
                     return res.status(200).json({ received: true });
                 }
 
-                // 1.5 Check slot commands (dynamic names from settings)
-                const slotSettings = await db.getSlotSettings(channelId);
-                console.log(`[Slot] Settings for ${channelId}:`, slotSettings ? { enabled: slotSettings.enabled, cmd_slot: slotSettings.cmd_slot } : 'null');
-
-                if (slotSettings && (slotSettings.enabled === 1 || slotSettings.enabled === true)) {
-                    // Strip ! prefix if present from saved commands
-                    const slotCmd = (slotSettings.cmd_slot || 'slot').toLowerCase().replace(/^!/, '');
-                    const balanceCmd = (slotSettings.cmd_balance || 'bakiye').toLowerCase().replace(/^!/, '');
-                    const leaderboardCmd = (slotSettings.cmd_leaderboard || 'slotsiralama').toLowerCase().replace(/^!/, '');
-                    const coinName = slotSettings.coin_name || 'Coin';
-
-                    console.log(`[Slot] Checking cmd: ${cmdName} vs slotCmd: ${slotCmd}, balanceCmd: ${balanceCmd}`);
-
-                    if (cmdName === slotCmd) {
-                        const betAmount = parseInt(cmdParts[1]) || 0;
-                        console.log(`[Slot] Processing slot command with bet: ${betAmount}`);
-                        const slotResponse = await processSlotCommand(channelId, message, betAmount, slotSettings, db);
-                        if (slotResponse) {
-                            console.log(`[Slot] Response: ${slotResponse}`);
-                            await kickApi.sendMessageToChannel(channelId, channel.access_token, slotResponse, message.message_id, db, channel.refresh_token);
-                            return res.status(200).json({ received: true });
-                        }
-                    }
-                    if (cmdName === balanceCmd) {
-                        const userId = message.sender.user_id || message.sender.id;
-                        const player = await db.getSlotPlayer(channelId, userId);
-                        const balance = player ? player.balance : slotSettings.start_balance;
-                        const response = `💰 @${message.sender.username} bakiyesi: ${balance.toLocaleString()} ${coinName}`;
-                        await kickApi.sendMessageToChannel(channelId, channel.access_token, response, message.message_id, db, channel.refresh_token);
-                        return res.status(200).json({ received: true });
-                    }
-                    if (cmdName === leaderboardCmd || cmdName === 'slotsıralama') {
-                        const leaders = await db.getSlotLeaderboard(channelId, 5);
-                        const response = leaders.length === 0
-                            ? '🏆 Henüz slot oynayan yok!'
-                            : '🏆 Slot Sıralaması: ' + leaders.map((p, i) => `${i + 1}. ${p.username} (${p.total_won.toLocaleString()} ${coinName})`).join(' | ');
-                        await kickApi.sendMessageToChannel(channelId, channel.access_token, response, null, db, channel.refresh_token);
-                        return res.status(200).json({ received: true });
-                    }
-                }
-
-                // 2. Check if game is enabled for game commands
-                const gameEnabled = await db.getGameEnabled(channelId);
-                console.log(`[Bot] Game check for channel ${channelId}. Status: ${gameEnabled ? 'ENABLED' : 'DISABLED'}`);
-
-                if (gameEnabled) {
-                    const response = await processCommand(channelId, message);
-                    if (response) {
-                        console.log(`[Bot] Game response: ${response.substring(0, 50)}...`);
-                        try {
-                            // Pass db and refresh_token for auto-refresh on 401
-                            await kickApi.sendMessageToChannel(channelId, channel.access_token, response, message.message_id, db, channel.refresh_token);
-                            console.log('[Bot] Game response sent successfully');
-                        } catch (sendError) {
-                            console.error('[Bot] FAILED to send game response:', sendError.message);
-                            // Try without reply if failed
-                            try {
-                                await kickApi.sendMessageToChannel(channelId, channel.access_token, response, null, db, channel.refresh_token);
-                                console.log('[Bot] Game response sent (without reply)');
-                            } catch (e2) {
-                                console.error('[Bot] FAILED to send even without reply:', e2.message);
-                            }
-                        }
-                    }
-                } else {
-                    console.log('[Bot] Game is disabled for this channel');
-                }
+                // Slot and RPG game features are completely disabled in chat.
+                // DoxiBot is now a focused Custom Commands & AI Chat Assistant.
             }
         }
         res.status(200).json({ received: true });
