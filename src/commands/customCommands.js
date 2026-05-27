@@ -222,8 +222,24 @@ export async function processCustomCommand(channelId, command, message) {
     };
 }
 
+const RANDOM_WORDS = [
+    'güneş', 'rüzgar', 'bulut', 'yıldız', 'deniz', 'yaprak', 'çiçek', 'nehir', 'orman', 'toprak',
+    'sevgi', 'neşe', 'huzur', 'umut', 'hayal', 'rüya', 'macera', 'dostluk', 'tebessüm', 'kahkaha',
+    'kahve', 'kitap', 'şarkı', 'masal', 'ışık', 'gölge', 'renk', 'uyum', 'sır', 'bilgelik',
+    'zaman', 'yolculuk', 'adım', 'başlangıç', 'keşif', 'anlar', 'melodi', 'fısıltı', 'yankı', 'radyo',
+    'gece', 'gündüz', 'bahar', 'yaz', 'sonbahar', 'kış', 'ateş', 'su', 'hava', 'kıvılcım'
+];
+
+function getRandomSemanticSeed(count = 3) {
+    const shuffled = [...RANDOM_WORDS].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count).join(', ');
+}
+
 async function generateAIResponse(prompt) {
     try {
+        const words = getRandomSemanticSeed(3);
+        const randomizedPrompt = `${prompt}\n\n(Not: Bu mesaja cevap verirken veya üslubunu belirlerken şu kelimelerden ilham alabilirsin veya tamamen farklı yazabilirsin: ${words})`;
+
         const response = await fetch('https://api.llm7.io/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -232,7 +248,8 @@ async function generateAIResponse(prompt) {
             },
             body: JSON.stringify({
                 model: 'gpt-4o-mini-2024-07-18',
-                messages: [{ role: 'user', content: prompt }]
+                messages: [{ role: 'user', content: randomizedPrompt }],
+                temperature: 0.9
             })
         });
         if (!response.ok) throw new Error(`AI API error: ${response.status} ${response.statusText}`);
