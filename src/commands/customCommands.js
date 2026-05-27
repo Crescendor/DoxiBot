@@ -224,17 +224,21 @@ export async function processCustomCommand(channelId, command, message) {
 
 async function generateAIResponse(prompt) {
     try {
-        const response = await fetch('https://text.pollinations.ai/', {
+        const response = await fetch('https://api.llm7.io/v1/chat/completions', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer unused'
+            },
             body: JSON.stringify({
-                messages: [{ role: 'user', content: prompt }],
-                model: 'openai',
-                jsonMode: false
+                model: 'gpt-4o-mini-2024-07-18',
+                messages: [{ role: 'user', content: prompt }]
             })
         });
-        if (!response.ok) throw new Error('AI API error');
-        const text = await response.text();
+        if (!response.ok) throw new Error(`AI API error: ${response.status} ${response.statusText}`);
+        const data = await response.json();
+        const text = data.choices?.[0]?.message?.content;
+        if (!text) throw new Error('Empty response from AI API');
         return text.trim();
     } catch (error) {
         console.error('AI Generation error:', error);
