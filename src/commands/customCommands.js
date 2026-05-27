@@ -240,13 +240,14 @@ async function generateAIResponse(prompt) {
         const words = getRandomSemanticSeed(3);
         const randomizedPrompt = `${prompt}\n\n(Not: Bu mesaja cevap verirken veya üslubunu belirlerken şu kelimelerden ilham alabilirsin veya tamamen farklı yazabilirsin: ${words})`;
 
-        const response = await fetch('https://hermes.ai.unturf.com/v1/chat/completions', {
+        const response = await fetch('https://api.llm7.io/v1/chat/completions', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer unused'
             },
             body: JSON.stringify({
-                model: 'adamo1139/Hermes-3-Llama-3.1-8B-FP8-Dynamic',
+                model: 'grok-3-mini-high',
                 messages: [{ role: 'user', content: randomizedPrompt }]
             })
         });
