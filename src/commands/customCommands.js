@@ -240,16 +240,13 @@ async function generateAIResponse(prompt) {
         const words = getRandomSemanticSeed(3);
         const randomizedPrompt = `${prompt}\n\n(Not: Bu mesaja cevap verirken veya üslubunu belirlerken şu kelimelerden ilham alabilirsin veya tamamen farklı yazabilirsin: ${words})`;
 
-        const response = await fetch('https://api.llm7.io/v1/chat/completions', {
+        const response = await fetch('https://text.pollinations.ai/v1/chat/completions', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer unused'
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'gpt-4o-mini-2024-07-18',
-                messages: [{ role: 'user', content: randomizedPrompt }],
-                temperature: 0.9
+                messages: [{ role: 'user', content: randomizedPrompt }]
             })
         });
         if (!response.ok) throw new Error(`AI API error: ${response.status} ${response.statusText}`);
