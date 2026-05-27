@@ -216,6 +216,51 @@ async function initDatabase() {
         END IF;
       END $$;
 
+      -- Add cooldown column to custom_commands if not exists
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name = 'custom_commands' AND column_name = 'cooldown') THEN
+          ALTER TABLE custom_commands ADD COLUMN cooldown INTEGER DEFAULT 0;
+        END IF;
+      END $$;
+
+      -- Add cooldown column to channel_commands if not exists
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name = 'channel_commands' AND column_name = 'cooldown') THEN
+          ALTER TABLE channel_commands ADD COLUMN cooldown INTEGER DEFAULT 0;
+        END IF;
+      END $$;
+
+      -- Add cooldown_message column to custom_commands if not exists
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name = 'custom_commands' AND column_name = 'cooldown_message') THEN
+          ALTER TABLE custom_commands ADD COLUMN cooldown_message TEXT;
+        END IF;
+      END $$;
+
+      -- Add cooldown_message column to channel_commands if not exists
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name = 'channel_commands' AND column_name = 'cooldown_message') THEN
+          ALTER TABLE channel_commands ADD COLUMN cooldown_message TEXT;
+        END IF;
+      END $$;
+
+      -- Add is_ai column to custom_commands if not exists
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name = 'custom_commands' AND column_name = 'is_ai') THEN
+          ALTER TABLE custom_commands ADD COLUMN is_ai INTEGER DEFAULT 0;
+        END IF;
+      END $$;
+
       -- Command counters (for {sayaç} variable)
       CREATE TABLE IF NOT EXISTS command_counters (
         channel_id BIGINT NOT NULL,
@@ -504,7 +549,7 @@ export const db = {
     // ========== COMMANDS ==========
     async getChannelCommands(channelId) {
         const result = await pool.query(
-            'SELECT command, description, enabled, response FROM channel_commands WHERE channel_id = $1::BIGINT ORDER BY command',
+            'SELECT command, description, enabled, response, cooldown, cooldown_message FROM channel_commands WHERE channel_id = $1::BIGINT ORDER BY command',
             [String(channelId)]
         );
         return result.rows;
@@ -517,22 +562,24 @@ export const db = {
         );
     },
 
-    async updateCommandResponse(channelId, originalCommand, response, newCommand = null, description = null) {
+    async updateCommandResponse(channelId, originalCommand, response, newCommand = null, description = null, cooldown = 0, cooldownMessage = null) {
         const cid = String(channelId);
-        console.log(`[DB] updateCommandResponse: channel=${cid}, original=${originalCommand}, new=${newCommand}, response length=${response?.length}, desc=${description?.substring(0, 20)}`);
+        const cdVal = parseInt(cooldown) || 0;
+        const cdMsg = cooldownMessage || null;
+        console.log(`[DB] updateCommandResponse: channel=${cid}, original=${originalCommand}, new=${newCommand}, response length=${response?.length}, desc=${description?.substring(0, 20)}, cooldown=${cdVal}, message=${cdMsg}`);
 
         if (newCommand && newCommand !== originalCommand) {
-            // Update command name, response, and optionally description
+            // Update command name, response, cooldown, cooldown_message and optionally description
             const result = await pool.query(
-                'UPDATE channel_commands SET command = $1, response = $2, description = COALESCE($5, description) WHERE channel_id = $3::BIGINT AND command = $4',
-                [newCommand, response, cid, originalCommand, description]
+                'UPDATE channel_commands SET command = $1, response = $2, cooldown = $5, cooldown_message = $6, description = COALESCE($7, description) WHERE channel_id = $3::BIGINT AND command = $4',
+                [newCommand, response, cid, originalCommand, cdVal, cdMsg, description]
             );
             console.log(`[DB] updateCommandResponse rows affected: ${result.rowCount}`);
         } else {
-            // Update response and optionally description
+            // Update response, cooldown, cooldown_message and optionally description
             const result = await pool.query(
-                'UPDATE channel_commands SET response = $1, description = COALESCE($4, description) WHERE channel_id = $2::BIGINT AND command = $3',
-                [response, cid, originalCommand, description]
+                'UPDATE channel_commands SET response = $1, cooldown = $4, cooldown_message = $5, description = COALESCE($6, description) WHERE channel_id = $2::BIGINT AND command = $3',
+                [response, cid, originalCommand, cdVal, cdMsg, description]
             );
             console.log(`[DB] updateCommandResponse rows affected: ${result.rowCount}`);
         }
@@ -769,15 +816,18 @@ export const db = {
     },
     async upsertCustomCommand(channelId, command, data) {
         await pool.query(`
-            INSERT INTO custom_commands (channel_id, command, response, sub_response, user_responses, reply_to_user, enabled)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO custom_commands (channel_id, command, response, sub_response, user_responses, reply_to_user, enabled, cooldown, cooldown_message, is_ai)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             ON CONFLICT (channel_id, command) DO UPDATE SET
                 response = $3,
                 sub_response = $4,
                 user_responses = $5,
                 reply_to_user = $6,
-                enabled = $7
-        `, [channelId, command.toLowerCase(), data.response, data.sub_response || null, data.user_responses || null, data.reply_to_user ? 1 : 0, data.enabled ? 1 : 0]);
+                enabled = $7,
+                cooldown = $8,
+                cooldown_message = $9,
+                is_ai = $10
+        `, [channelId, command.toLowerCase(), data.response, data.sub_response || null, data.user_responses || null, data.reply_to_user ? 1 : 0, data.enabled ? 1 : 0, parseInt(data.cooldown) || 0, data.cooldown_message || null, data.is_ai ? 1 : 0]);
     },
     async deleteCustomCommand(channelId, command) {
         await pool.query('DELETE FROM custom_commands WHERE channel_id = $1 AND command = $2', [channelId, command.toLowerCase()]);

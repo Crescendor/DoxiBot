@@ -801,6 +801,18 @@ app.post('/api/test-command', async (req, res) => {
     try {
         const { channelId, content, username, userId } = req.body;
         const message = { content, sender: { user_id: userId || 12345, username: username || 'TestUser' } };
+        
+        // Check custom commands first
+        if (content && content.startsWith('!')) {
+            const cmdParts = content.slice(1).split(' ');
+            const cmdName = cmdParts[0].toLowerCase();
+            
+            const customResult = await processCustomCommand(channelId || 0, cmdName, message);
+            if (customResult) {
+                return res.json({ response: customResult.response });
+            }
+        }
+
         const response = await processCommand(channelId || 0, message);
         res.json({ response });
     } catch (e) { res.json({ response: `❌ Hata: ${e.message}` }); }
@@ -815,7 +827,7 @@ app.get('/api/admin/channel/:id/custom-commands', async (req, res) => {
 app.post('/api/admin/channel/:id/custom-command', async (req, res) => {
     try {
         const channelId = req.params.id;
-        const { command, response, sub_response, user_responses, reply_to_user, enabled } = req.body;
+        const { command, response, sub_response, user_responses, reply_to_user, enabled, cooldown, cooldown_message, is_ai } = req.body;
         if (!command || !response) return res.status(400).json({ error: 'Komut ve cevap gerekli' });
 
         await db.upsertCustomCommand(channelId, command, {
@@ -823,7 +835,10 @@ app.post('/api/admin/channel/:id/custom-command', async (req, res) => {
             sub_response: sub_response || null,
             user_responses: user_responses || null,
             reply_to_user: reply_to_user !== false,
-            enabled: enabled !== false
+            enabled: enabled !== false,
+            cooldown: parseInt(cooldown) || 0,
+            cooldown_message: cooldown_message || null,
+            is_ai: is_ai ? 1 : 0
         });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -915,9 +930,9 @@ app.post('/api/admin/channel/:id/command/:cmd/toggle', async (req, res) => {
 app.put('/api/admin/channel/:id/command/:cmd', async (req, res) => {
     try {
         const { id: channelId, cmd: originalCommand } = req.params;
-        const { response, command: newCommand, description } = req.body;
-        console.log('[API] PUT command:', { channelId, originalCommand, newCommand, responseLen: response?.length, description: description?.substring(0, 20) });
-        await db.updateCommandResponse(channelId, originalCommand, response, newCommand, description);
+        const { response, command: newCommand, description, cooldown, cooldown_message } = req.body;
+        console.log('[API] PUT command:', { channelId, originalCommand, newCommand, responseLen: response?.length, description: description?.substring(0, 20), cooldown, cooldown_message });
+        await db.updateCommandResponse(channelId, originalCommand, response, newCommand, description, cooldown, cooldown_message);
         res.json({ success: true });
     } catch (e) {
         console.error('[API] updateCommand error:', e);

@@ -466,6 +466,15 @@ export const gameCommands = {
     }
 };
 
+function isModOrBroadcaster(sender) {
+    if (!sender) return false;
+    const badges = sender.badges || [];
+    const hasMod = badges.some(b => b.type === 'moderator' || b.type === 'mod');
+    const hasBroadcaster = badges.some(b => b.type === 'broadcaster' || b.type === 'owner');
+    const identity = sender.identity || {};
+    return hasMod || hasBroadcaster || identity.is_moderator || identity.is_broadcaster;
+}
+
 // Process command for a specific channel
 export async function processCommand(channelId, message) {
     const { content, sender } = message;
@@ -474,10 +483,6 @@ export async function processCommand(channelId, message) {
     const parts = content.slice(1).split(' ');
     const command = parts[0].toLowerCase();
     const args = parts.slice(1);
-
-    // Check if command is enabled for this channel
-    const cmdSettings = await db.getChannelCommand(channelId, command);
-    if (cmdSettings && cmdSettings.enabled === 0) return null;
 
     const aliases = {
         'avlan': 'av', 'hunt': 'av', 'attack': 'saldir', 'saldır': 'saldir',
@@ -494,6 +499,26 @@ export async function processCommand(channelId, message) {
     const actualCommand = aliases[command] || command;
     const handler = gameCommands[actualCommand];
     if (!handler) return null;
+
+    // Check if command is enabled for this channel
+    const cmdSettings = await db.getChannelCommand(channelId, actualCommand);
+    if (cmdSettings && cmdSettings.enabled === 0) return null;
+
+    // Check custom cooldown if not moderator/broadcaster
+    if (cmdSettings && cmdSettings.cooldown > 0 && !isModOrBroadcaster(sender)) {
+        const actionKey = `cmd_${actualCommand}`;
+        const cd = await db.getCooldown(channelId, sender.user_id, actionKey);
+        if (cd > 0) {
+            let msg = cmdSettings.cooldown_message;
+            if (!msg) {
+                msg = `⏳ @{username}, bu komutu tekrar kullanmak için {sure} saniye beklemelisin!`;
+            }
+            msg = msg.replace(/\{username\}/gi, sender.username);
+            msg = msg.replace(/\{sure\}/gi, cd);
+            return msg;
+        }
+        await db.setCooldown(channelId, sender.user_id, actionKey, cmdSettings.cooldown);
+    }
 
     try {
         const response = await handler(channelId, sender.user_id, sender.username, args);

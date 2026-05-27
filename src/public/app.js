@@ -307,6 +307,16 @@ async function loadCommands() {
         </div>
         <input type="text" class="input cmd-desc-input" data-cmd="${cmd.command}" value="${esc(cmd.description || '')}" placeholder="Komut açıklaması..." style="margin-bottom: 8px; font-size: 12px; color: #999;">
         <textarea class="input command-response" data-cmd="${cmd.command}" placeholder="Yanıt şablonu...">${esc(cmd.response || '')}</textarea>
+        <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px; margin-bottom: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 13px; color: #888; width: 140px;">⏱️ Cooldown (saniye):</span>
+            <input type="number" class="input cmd-cooldown-input" data-cmd="${cmd.command}" value="${cmd.cooldown || 0}" style="width: 80px; padding: 4px 8px; font-size: 13px;">
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 12px; color: #888;">💬 Cooldown Mesajı (boş ise varsayılan):</span>
+            <input type="text" class="input cmd-cooldown-message-input" data-cmd="${cmd.command}" value="${esc(cmd.cooldown_message || '')}" placeholder="⏳ @{username}, bu komutu tekrar kullanmak için {sure} saniye beklemelisin!" style="font-size: 13px; padding: 6px 10px;">
+          </div>
+        </div>
         <button class="btn btn-small" onclick="saveCommand('${cmd.command}')">💾 Kaydet</button>
       </div>
     `).join('');
@@ -342,17 +352,20 @@ async function saveCommand(originalCommand) {
   const nameInput = document.querySelector(`.cmd-name-input[data-original="${originalCommand}"]`);
   const responseTextarea = document.querySelector(`.command-response[data-cmd="${originalCommand}"]`);
   const descInput = document.querySelector(`.cmd-desc-input[data-cmd="${originalCommand}"]`);
+  const cooldownInput = document.querySelector(`.cmd-cooldown-input[data-cmd="${originalCommand}"]`);
 
   const newCommand = nameInput ? nameInput.value.trim().toLowerCase() : originalCommand;
   const response = responseTextarea ? responseTextarea.value : '';
   const description = descInput ? descInput.value : '';
+  const cooldown = cooldownInput ? parseInt(cooldownInput.value) || 0 : 0;
+  const cooldown_message = cooldownMessageInput ? cooldownMessageInput.value : '';
 
-  console.log('[saveCommand] Saving:', { originalCommand, newCommand, response: response.substring(0, 50), description });
+  console.log('[saveCommand] Saving:', { originalCommand, newCommand, response: response.substring(0, 50), description, cooldown, cooldown_message });
 
   const res = await fetch(`/api/admin/channel/${currentChannelId}/command/${originalCommand}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ command: newCommand, response, description })
+    body: JSON.stringify({ command: newCommand, response, description, cooldown, cooldown_message })
   });
 
   const data = await res.json();
@@ -1194,6 +1207,8 @@ async function loadCustomCommands() {
           ${cmd.enabled ? '✅ Aktif' : '❌ Kapalı'}
           ${cmd.sub_response ? ' | 👑 Abone cevabı var' : ''}
           ${cmd.reply_to_user ? ' | ↩️ Cevap' : ''}
+          ${cmd.cooldown > 0 ? ` | ⏱️ Cooldown: ${cmd.cooldown}sn` : ''}
+          ${cmd.is_ai === 1 || cmd.is_ai === true ? ' | 🤖 AI Komutu' : ''}
         </div>
       </div>
     `).join('') : '<div class="empty-state">Henüz özel komut yok. + Yeni Komut ile ekleyin!</div>';
@@ -1224,10 +1239,20 @@ function openAddCustomCmdModal() {
         <label>👑 Abone/Mod Özel Cevabı (boş bırakılabilir)</label>
         <textarea id="new-cmd-sub-response" class="input" rows="2" placeholder=""></textarea>
       </div>
+      <div class="form-group">
+        <label>⏱️ Cooldown (Saniye, modlar hariç)</label>
+        <input type="number" id="new-cmd-cooldown" class="input" placeholder="0" value="0">
+      </div>
+      <div class="form-group">
+        <label>💬 Cooldown Mesajı (boş bırakılırsa varsayılan kullanılır)</label>
+        <input type="text" id="new-cmd-cooldown-message" class="input" placeholder="⏳ @{username}, bu komutu tekrar kullanmak için {sure} saniye beklemelisin!">
+      </div>
       <div class="form-row" style="margin:12px 0">
         <label class="checkbox"><input type="checkbox" id="new-cmd-reply" checked> ↩️ Kullanıcıya cevap ver</label>
         <label class="checkbox"><input type="checkbox" id="new-cmd-enabled" checked> ✅ Aktif</label>
+        <label class="checkbox"><input type="checkbox" id="new-cmd-is-ai"> 🤖 AI Komutu</label>
       </div>
+      <div style="font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 8px;">* AI Komutu açıldığında, yukarıdaki cevap alanı "Sistem Promptu" (yapay zekaya kimlik/kural tanımlama) olarak çalışır. Kullanıcının komut yanına yazdığı mesajlar ise soru olarak yapay zekaya iletilir.</div>
     </div>
 
     <div id="tab-users" class="tab-content">
@@ -1256,6 +1281,9 @@ async function saveNewCustomCmd() {
   const sub_response = document.getElementById('new-cmd-sub-response').value || null;
   const reply_to_user = document.getElementById('new-cmd-reply').checked;
   const enabled = document.getElementById('new-cmd-enabled').checked;
+  const cooldown = parseInt(document.getElementById('new-cmd-cooldown').value) || 0;
+  const cooldown_message = document.getElementById('new-cmd-cooldown-message').value || '';
+  const is_ai = document.getElementById('new-cmd-is-ai').checked;
 
   if (!command || !response) {
     showNotification('Komut ve cevap gerekli!', 'error');
@@ -1270,7 +1298,10 @@ async function saveNewCustomCmd() {
       sub_response,
       user_responses: JSON.stringify(currentUserResponses),
       reply_to_user,
-      enabled
+      enabled,
+      cooldown,
+      cooldown_message,
+      is_ai
     })
   });
 
@@ -1351,10 +1382,20 @@ function editCustomCmd(command) {
         <label>👑 Abone/Mod Özel Cevabı</label>
         <textarea id="edit-cmd-sub-response" class="input" rows="2">${esc(cmd.sub_response || '')}</textarea>
       </div>
+      <div class="form-group">
+        <label>⏱️ Cooldown (Saniye, modlar hariç)</label>
+        <input type="number" id="edit-cmd-cooldown" class="input" value="${cmd.cooldown || 0}">
+      </div>
+      <div class="form-group">
+        <label>💬 Cooldown Mesajı (boş bırakılırsa varsayılan kullanılır)</label>
+        <input type="text" id="edit-cmd-cooldown-message" class="input" value="${esc(cmd.cooldown_message || '')}" placeholder="⏳ @{username}, bu komutu tekrar kullanmak için {sure} saniye beklemelisin!">
+      </div>
       <div class="form-row" style="margin:12px 0">
         <label class="checkbox"><input type="checkbox" id="edit-cmd-reply" ${cmd.reply_to_user ? 'checked' : ''}> ↩️ Kullanıcıya cevap ver</label>
         <label class="checkbox"><input type="checkbox" id="edit-cmd-enabled" ${cmd.enabled ? 'checked' : ''}> ✅ Aktif</label>
+        <label class="checkbox"><input type="checkbox" id="edit-cmd-is-ai" ${cmd.is_ai === 1 || cmd.is_ai === true ? 'checked' : ''}> 🤖 AI Komutu</label>
       </div>
+      <div style="font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 8px;">* AI Komutu açıldığında, yukarıdaki cevap alanı "Sistem Promptu" (yapay zekaya kimlik/kural tanımlama) olarak çalışır. Kullanıcının komut yanına yazdığı mesajlar ise soru olarak yapay zekaya iletilir.</div>
     </div>
     
     <div id="tab-users" class="tab-content">
@@ -1380,6 +1421,9 @@ async function saveEditCustomCmd(command) {
   const sub_response = document.getElementById('edit-cmd-sub-response').value || null;
   const reply_to_user = document.getElementById('edit-cmd-reply').checked;
   const enabled = document.getElementById('edit-cmd-enabled').checked;
+  const cooldown = parseInt(document.getElementById('edit-cmd-cooldown').value) || 0;
+  const cooldown_message = document.getElementById('edit-cmd-cooldown-message').value || '';
+  const is_ai = document.getElementById('edit-cmd-is-ai').checked;
 
   if (!response) {
     showNotification('Cevap gerekli!', 'error');
@@ -1394,7 +1438,10 @@ async function saveEditCustomCmd(command) {
       sub_response,
       user_responses: JSON.stringify(currentUserResponses),
       reply_to_user,
-      enabled
+      enabled,
+      cooldown,
+      cooldown_message,
+      is_ai
     })
   });
 
