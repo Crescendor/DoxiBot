@@ -261,6 +261,15 @@ async function initDatabase() {
         END IF;
       END $$;
 
+      -- Add system_prompt column to custom_commands if not exists
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name = 'custom_commands' AND column_name = 'system_prompt') THEN
+          ALTER TABLE custom_commands ADD COLUMN system_prompt TEXT;
+        END IF;
+      END $$;
+
       -- Command counters (for {sayaç} variable)
       CREATE TABLE IF NOT EXISTS command_counters (
         channel_id BIGINT NOT NULL,
@@ -816,8 +825,8 @@ export const db = {
     },
     async upsertCustomCommand(channelId, command, data) {
         await pool.query(`
-            INSERT INTO custom_commands (channel_id, command, response, sub_response, user_responses, reply_to_user, enabled, cooldown, cooldown_message, is_ai)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            INSERT INTO custom_commands (channel_id, command, response, sub_response, user_responses, reply_to_user, enabled, cooldown, cooldown_message, is_ai, system_prompt)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             ON CONFLICT (channel_id, command) DO UPDATE SET
                 response = $3,
                 sub_response = $4,
@@ -826,8 +835,9 @@ export const db = {
                 enabled = $7,
                 cooldown = $8,
                 cooldown_message = $9,
-                is_ai = $10
-        `, [channelId, command.toLowerCase(), data.response, data.sub_response || null, data.user_responses || null, data.reply_to_user ? 1 : 0, data.enabled ? 1 : 0, parseInt(data.cooldown) || 0, data.cooldown_message || null, data.is_ai ? 1 : 0]);
+                is_ai = $10,
+                system_prompt = $11
+        `, [channelId, command.toLowerCase(), data.response, data.sub_response || null, data.user_responses || null, data.reply_to_user ? 1 : 0, data.enabled ? 1 : 0, parseInt(data.cooldown) || 0, data.cooldown_message || null, data.is_ai ? 1 : 0, data.system_prompt || null]);
     },
     async deleteCustomCommand(channelId, command) {
         await pool.query('DELETE FROM custom_commands WHERE channel_id = $1 AND command = $2', [channelId, command.toLowerCase()]);

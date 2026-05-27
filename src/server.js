@@ -827,7 +827,7 @@ app.get('/api/admin/channel/:id/custom-commands', async (req, res) => {
 app.post('/api/admin/channel/:id/custom-command', async (req, res) => {
     try {
         const channelId = req.params.id;
-        const { command, response, sub_response, user_responses, reply_to_user, enabled, cooldown, cooldown_message, is_ai } = req.body;
+        const { command, response, sub_response, user_responses, reply_to_user, enabled, cooldown, cooldown_message, is_ai, system_prompt } = req.body;
         if (!command || !response) return res.status(400).json({ error: 'Komut ve cevap gerekli' });
 
         await db.upsertCustomCommand(channelId, command, {
@@ -838,7 +838,8 @@ app.post('/api/admin/channel/:id/custom-command', async (req, res) => {
             enabled: enabled !== false,
             cooldown: parseInt(cooldown) || 0,
             cooldown_message: cooldown_message || null,
-            is_ai: is_ai ? 1 : 0
+            is_ai: is_ai ? 1 : 0,
+            system_prompt: system_prompt || null
         });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }

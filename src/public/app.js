@@ -1192,7 +1192,10 @@ async function loadCustomCommands() {
     const res = await fetch(`/api/admin/channel/${currentChannelId}/custom-commands`);
     allCustomCommands = await res.json();
 
-    document.getElementById('custom-commands-list').innerHTML = allCustomCommands.length > 0 ? allCustomCommands.map(cmd => `
+    document.getElementById('custom-commands-list').innerHTML = allCustomCommands.length > 0 ? allCustomCommands.map(cmd => {
+      const isAi = cmd.is_ai === 1 || cmd.is_ai === true;
+      const previewText = isAi ? (cmd.system_prompt || cmd.response || '') : cmd.response;
+      return `
       <div class="custom-cmd-item ${cmd.enabled ? '' : 'disabled'}">
         <div class="cmd-header">
           <span class="cmd-name">!${esc(cmd.command)}</span>
@@ -1202,16 +1205,17 @@ async function loadCustomCommands() {
             <button class="btn btn-small btn-danger" onclick="deleteCustomCmd('${esc(cmd.command)}')">🗑️</button>
           </div>
         </div>
-        <div class="cmd-response">${esc(cmd.response.substring(0, 100))}${cmd.response.length > 100 ? '...' : ''}</div>
+        <div class="cmd-response">${isAi ? '🤖 AI: ' : ''}${esc(previewText.substring(0, 100))}${previewText.length > 100 ? '...' : ''}</div>
         <div class="cmd-meta">
           ${cmd.enabled ? '✅ Aktif' : '❌ Kapalı'}
           ${cmd.sub_response ? ' | 👑 Abone cevabı var' : ''}
           ${cmd.reply_to_user ? ' | ↩️ Cevap' : ''}
           ${cmd.cooldown > 0 ? ` | ⏱️ Cooldown: ${cmd.cooldown}sn` : ''}
-          ${cmd.is_ai === 1 || cmd.is_ai === true ? ' | 🤖 AI Komutu' : ''}
+          ${isAi ? ' | 🤖 AI Komutu' : ''}
         </div>
       </div>
-    `).join('') : '<div class="empty-state">Henüz özel komut yok. + Yeni Komut ile ekleyin!</div>';
+    `;
+    }).join('') : '<div class="empty-state">Henüz özel komut yok. + Yeni Komut ile ekleyin!</div>';
   } catch (e) {
     document.getElementById('custom-commands-list').innerHTML = '<div class="empty-state">Yüklenemedi</div>';
   }
@@ -1232,8 +1236,12 @@ function openAddCustomCmdModal() {
         <input type="text" id="new-cmd-name" class="input" placeholder="!selam" value="!">
       </div>
       <div class="form-group">
-        <label>Cevap</label>
+        <label>Varsayılan Cevap (AI çalışmazsa veya fallback için)</label>
         <textarea id="new-cmd-response" class="input" rows="3" placeholder="Merhaba {bahset}!"></textarea>
+      </div>
+      <div class="form-group" id="new-cmd-system-prompt-group" style="display: none;">
+        <label>🤖 Sistem Promptu (Yapay Zeka Rolü/Kuralları)</label>
+        <textarea id="new-cmd-system-prompt" class="input" rows="3" placeholder="Sen bu kanalın bilge büyücüsüsün. Samimi ve Türkçe cevap ver."></textarea>
       </div>
       <div class="form-group">
         <label>👑 Abone/Mod Özel Cevabı (boş bırakılabilir)</label>
@@ -1250,9 +1258,9 @@ function openAddCustomCmdModal() {
       <div class="form-row" style="margin:12px 0">
         <label class="checkbox"><input type="checkbox" id="new-cmd-reply" checked> ↩️ Kullanıcıya cevap ver</label>
         <label class="checkbox"><input type="checkbox" id="new-cmd-enabled" checked> ✅ Aktif</label>
-        <label class="checkbox"><input type="checkbox" id="new-cmd-is-ai"> 🤖 AI Komutu</label>
+        <label class="checkbox"><input type="checkbox" id="new-cmd-is-ai" onchange="toggleSystemPrompt('new')"> 🤖 AI Komutu</label>
       </div>
-      <div style="font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 8px;">* AI Komutu açıldığında, yukarıdaki cevap alanı "Sistem Promptu" (yapay zekaya kimlik/kural tanımlama) olarak çalışır. Kullanıcının komut yanına yazdığı mesajlar ise soru olarak yapay zekaya iletilir.</div>
+      <div style="font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 8px;">* AI Komutu açıldığında, yapay zeka "Sistem Promptu" kurallarına göre cevap üretir. Kullanıcının komut yanına yazdığı mesajlar ise soru olarak yapay zekaya iletilir.</div>
     </div>
 
     <div id="tab-users" class="tab-content">
@@ -1284,6 +1292,7 @@ async function saveNewCustomCmd() {
   const cooldown = parseInt(document.getElementById('new-cmd-cooldown').value) || 0;
   const cooldown_message = document.getElementById('new-cmd-cooldown-message').value || '';
   const is_ai = document.getElementById('new-cmd-is-ai').checked;
+  const system_prompt = document.getElementById('new-cmd-system-prompt').value || null;
 
   if (!command || !response) {
     showNotification('Komut ve cevap gerekli!', 'error');
@@ -1301,7 +1310,8 @@ async function saveNewCustomCmd() {
       enabled,
       cooldown,
       cooldown_message,
-      is_ai
+      is_ai,
+      system_prompt
     })
   });
 
@@ -1317,6 +1327,14 @@ function switchTab(btn, tabId) {
   // Activate selected tab and content
   btn.classList.add('active');
   document.getElementById(tabId).classList.add('active');
+}
+
+function toggleSystemPrompt(type) {
+  const isAi = document.getElementById(`${type}-cmd-is-ai`).checked;
+  const group = document.getElementById(`${type}-cmd-system-prompt-group`);
+  if (group) {
+    group.style.display = isAi ? 'block' : 'none';
+  }
 }
 
 
@@ -1367,6 +1385,8 @@ function editCustomCmd(command) {
     currentUserResponses = JSON.parse(cmd.user_responses || '[]');
   } catch (e) { currentUserResponses = []; }
 
+  const isAi = cmd.is_ai === 1 || cmd.is_ai === true;
+
   openModal('✏️ Komutu Düzenle: !' + command, `
     <div class="tabs">
       <button class="tab active" onclick="switchTab(this, 'tab-general')">Genel</button>
@@ -1375,8 +1395,12 @@ function editCustomCmd(command) {
     
     <div id="tab-general" class="tab-content active">
       <div class="form-group">
-        <label>Cevap</label>
+        <label>Varsayılan Cevap</label>
         <textarea id="edit-cmd-response" class="input" rows="3">${esc(cmd.response)}</textarea>
+      </div>
+      <div class="form-group" id="edit-cmd-system-prompt-group" style="display: ${isAi ? 'block' : 'none'};">
+        <label>🤖 Sistem Promptu (Yapay Zeka Rolü/Kuralları)</label>
+        <textarea id="edit-cmd-system-prompt" class="input" rows="3" placeholder="Sen bu kanalın bilge büyücüsüsün. Samimi ve Türkçe cevap ver.">${esc(cmd.system_prompt || '')}</textarea>
       </div>
       <div class="form-group">
         <label>👑 Abone/Mod Özel Cevabı</label>
@@ -1393,9 +1417,9 @@ function editCustomCmd(command) {
       <div class="form-row" style="margin:12px 0">
         <label class="checkbox"><input type="checkbox" id="edit-cmd-reply" ${cmd.reply_to_user ? 'checked' : ''}> ↩️ Kullanıcıya cevap ver</label>
         <label class="checkbox"><input type="checkbox" id="edit-cmd-enabled" ${cmd.enabled ? 'checked' : ''}> ✅ Aktif</label>
-        <label class="checkbox"><input type="checkbox" id="edit-cmd-is-ai" ${cmd.is_ai === 1 || cmd.is_ai === true ? 'checked' : ''}> 🤖 AI Komutu</label>
+        <label class="checkbox"><input type="checkbox" id="edit-cmd-is-ai" ${isAi ? 'checked' : ''} onchange="toggleSystemPrompt('edit')"> 🤖 AI Komutu</label>
       </div>
-      <div style="font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 8px;">* AI Komutu açıldığında, yukarıdaki cevap alanı "Sistem Promptu" (yapay zekaya kimlik/kural tanımlama) olarak çalışır. Kullanıcının komut yanına yazdığı mesajlar ise soru olarak yapay zekaya iletilir.</div>
+      <div style="font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 8px;">* AI Komutu açıldığında, yapay zeka "Sistem Promptu" kurallarına göre cevap üretir. Kullanıcının komut yanına yazdığı mesajlar ise soru olarak yapay zekaya iletilir.</div>
     </div>
     
     <div id="tab-users" class="tab-content">
@@ -1424,6 +1448,7 @@ async function saveEditCustomCmd(command) {
   const cooldown = parseInt(document.getElementById('edit-cmd-cooldown').value) || 0;
   const cooldown_message = document.getElementById('edit-cmd-cooldown-message').value || '';
   const is_ai = document.getElementById('edit-cmd-is-ai').checked;
+  const system_prompt = document.getElementById('edit-cmd-system-prompt').value || null;
 
   if (!response) {
     showNotification('Cevap gerekli!', 'error');
@@ -1441,7 +1466,8 @@ async function saveEditCustomCmd(command) {
       enabled,
       cooldown,
       cooldown_message,
-      is_ai
+      is_ai,
+      system_prompt
     })
   });
 

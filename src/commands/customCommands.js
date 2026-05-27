@@ -204,7 +204,8 @@ export async function processCustomCommand(channelId, command, message) {
         const userArgs = parts.slice(1).join(' ').trim();
         
         const userPrompt = userArgs || "Merhaba! Kendini kısaca tanıt ve maceracılara selam ver.";
-        response = await generateAIResponse(userPrompt, response);
+        const systemPrompt = cmd.system_prompt || cmd.response;
+        response = await generateAIResponse(userPrompt, systemPrompt);
     }
 
     // Increment use count
