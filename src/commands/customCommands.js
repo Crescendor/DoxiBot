@@ -203,7 +203,11 @@ export async function processCustomCommand(channelId, command, message) {
         const parts = message.content.split(' ');
         const userArgs = parts.slice(1).join(' ').trim();
         
-        const rawUserPrompt = userArgs || "Merhaba! Kendini kısaca tanıt ve maceracılara selam ver.";
+        const aiUseArgs = cmd.ai_use_args === undefined || cmd.ai_use_args === null || cmd.ai_use_args === 1;
+        const rawUserPrompt = aiUseArgs
+            ? (userArgs || "Merhaba! Kendini kısaca tanıt ve maceracılara selam ver.")
+            : "Lütfen talimatlara uygun şekilde yeni bir cevap üret.";
+        
         const rawSystemPrompt = cmd.system_prompt || cmd.response;
 
         // Parse variables in prompts before sending to AI for ultimate channel integrations

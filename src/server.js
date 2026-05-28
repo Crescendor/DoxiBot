@@ -762,7 +762,7 @@ app.get('/api/admin/channel/:id/custom-commands', async (req, res) => {
 app.post('/api/admin/channel/:id/custom-command', async (req, res) => {
     try {
         const channelId = req.params.id;
-        const { command, response, sub_response, user_responses, reply_to_user, enabled, cooldown, cooldown_message, is_ai, system_prompt, ai_model, ai_temperature, ai_nsfw } = req.body;
+        const { command, response, sub_response, user_responses, reply_to_user, enabled, cooldown, cooldown_message, is_ai, system_prompt, ai_model, ai_temperature, ai_nsfw, ai_use_args } = req.body;
         if (!command || !response) return res.status(400).json({ error: 'Komut ve cevap gerekli' });
 
         await db.upsertCustomCommand(channelId, command, {
@@ -777,7 +777,8 @@ app.post('/api/admin/channel/:id/custom-command', async (req, res) => {
             system_prompt: system_prompt || null,
             ai_model: ai_model || 'grok-3',
             ai_temperature: ai_temperature !== undefined && ai_temperature !== null ? parseFloat(ai_temperature) : 0.85,
-            ai_nsfw: ai_nsfw ? 1 : 0
+            ai_nsfw: ai_nsfw ? 1 : 0,
+            ai_use_args: ai_use_args !== false
         });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }

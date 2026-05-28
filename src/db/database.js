@@ -297,6 +297,15 @@ async function initDatabase() {
         END IF;
       END $$;
 
+      -- Add ai_use_args column to custom_commands if not exists
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name = 'custom_commands' AND column_name = 'ai_use_args') THEN
+          ALTER TABLE custom_commands ADD COLUMN ai_use_args INTEGER DEFAULT 1;
+        END IF;
+      END $$;
+
       -- Command counters (for {sayaç} variable)
       CREATE TABLE IF NOT EXISTS command_counters (
         channel_id BIGINT NOT NULL,
@@ -852,8 +861,8 @@ export const db = {
     },
     async upsertCustomCommand(channelId, command, data) {
         await pool.query(`
-            INSERT INTO custom_commands (channel_id, command, response, sub_response, user_responses, reply_to_user, enabled, cooldown, cooldown_message, is_ai, system_prompt, ai_model, ai_temperature, ai_nsfw)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            INSERT INTO custom_commands (channel_id, command, response, sub_response, user_responses, reply_to_user, enabled, cooldown, cooldown_message, is_ai, system_prompt, ai_model, ai_temperature, ai_nsfw, ai_use_args)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             ON CONFLICT (channel_id, command) DO UPDATE SET
                 response = $3,
                 sub_response = $4,
@@ -866,7 +875,8 @@ export const db = {
                 system_prompt = $11,
                 ai_model = $12,
                 ai_temperature = $13,
-                ai_nsfw = $14
+                ai_nsfw = $14,
+                ai_use_args = $15
         `, [
             channelId, 
             command.toLowerCase(), 
@@ -881,7 +891,8 @@ export const db = {
             data.system_prompt || null,
             data.ai_model || 'grok-3',
             data.ai_temperature !== undefined && data.ai_temperature !== null ? parseFloat(data.ai_temperature) : 0.85,
-            data.ai_nsfw ? 1 : 0
+            data.ai_nsfw ? 1 : 0,
+            data.ai_use_args !== undefined && data.ai_use_args !== null ? (data.ai_use_args ? 1 : 0) : 1
         ]);
     },
     async deleteCustomCommand(channelId, command) {

@@ -1254,6 +1254,7 @@ function openAddCustomCmdModal() {
           </div>
         </div>
         <label class="checkbox" style="display: flex; align-items: center; gap: 6px;"><input type="checkbox" id="new-cmd-ai-nsfw"> 🤬 Küfür / Argo serbest bırakılsın</label>
+        <label class="checkbox" style="display: flex; align-items: center; gap: 6px; margin-top: 6px;"><input type="checkbox" id="new-cmd-ai-use-args" checked> 💬 Kullanıcı girdisine cevap verilsin (Soru-Cevap modu)</label>
       </div>
 
       <div style="font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 8px;">* AI Komutu açıldığında, "Cevap" alanı yapay zeka için "Sistem Promptu" (rol ve kurallar) yerine geçer. Kullanıcının komut yanına yazdığı mesajlar ise soru olarak iletilir.</div>
@@ -1292,6 +1293,7 @@ async function saveNewCustomCmd() {
   const ai_model = is_ai ? document.getElementById('new-cmd-ai-model').value : 'grok-3';
   const ai_temperature = is_ai ? parseFloat(document.getElementById('new-cmd-ai-temp').value) : 0.85;
   const ai_nsfw = is_ai ? document.getElementById('new-cmd-ai-nsfw').checked : false;
+  const ai_use_args = is_ai ? document.getElementById('new-cmd-ai-use-args').checked : true;
 
   if (!command || !response) {
     showNotification('Komut ve cevap gerekli!', 'error');
@@ -1313,7 +1315,8 @@ async function saveNewCustomCmd() {
       system_prompt,
       ai_model,
       ai_temperature,
-      ai_nsfw
+      ai_nsfw,
+      ai_use_args
     })
   });
 
@@ -1448,6 +1451,7 @@ function editCustomCmd(command) {
           </div>
         </div>
         <label class="checkbox" style="display: flex; align-items: center; gap: 6px;"><input type="checkbox" id="edit-cmd-ai-nsfw" ${cmd.ai_nsfw === 1 ? 'checked' : ''}> 🤬 Küfür / Argo serbest bırakılsın</label>
+        <label class="checkbox" style="display: flex; align-items: center; gap: 6px; margin-top: 6px;"><input type="checkbox" id="edit-cmd-ai-use-args" ${cmd.ai_use_args === undefined || cmd.ai_use_args === null || cmd.ai_use_args === 1 ? 'checked' : ''}> 💬 Kullanıcı girdisine cevap verilsin (Soru-Cevap modu)</label>
       </div>
 
       <div style="font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 8px;">* AI Komutu açıldığında, "Cevap" alanı yapay zeka için "Sistem Promptu" (rol ve kurallar) yerine geçer. Kullanıcının komut yanına yazdığı mesajlar ise soru olarak iletimir.</div>
@@ -1483,6 +1487,7 @@ async function saveEditCustomCmd(command) {
   const ai_model = is_ai ? document.getElementById('edit-cmd-ai-model').value : 'grok-3';
   const ai_temperature = is_ai ? parseFloat(document.getElementById('edit-cmd-ai-temp').value) : 0.85;
   const ai_nsfw = is_ai ? document.getElementById('edit-cmd-ai-nsfw').checked : false;
+  const ai_use_args = is_ai ? document.getElementById('edit-cmd-ai-use-args').checked : true;
 
   if (!response) {
     showNotification('Cevap gerekli!', 'error');
@@ -1504,7 +1509,8 @@ async function saveEditCustomCmd(command) {
       system_prompt,
       ai_model,
       ai_temperature,
-      ai_nsfw
+      ai_nsfw,
+      ai_use_args
     })
   });
 
