@@ -245,8 +245,9 @@ async function generateAIResponse(userPrompt, systemPrompt = null) {
                 'Authorization': 'Bearer unused'
             },
             body: JSON.stringify({
-                model: 'GLM-4.6V-Flash',
-                messages: messages
+                model: 'grok-3',
+                messages: messages,
+                temperature: 0.85
             })
         });
         if (!response.ok) throw new Error(`AI API error: ${response.status} ${response.statusText}`);
