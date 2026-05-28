@@ -203,8 +203,13 @@ export async function processCustomCommand(channelId, command, message) {
         const parts = message.content.split(' ');
         const userArgs = parts.slice(1).join(' ').trim();
         
-        const userPrompt = userArgs || "Merhaba! Kendini kısaca tanıt ve maceracılara selam ver.";
-        const systemPrompt = cmd.system_prompt || cmd.response;
+        const rawUserPrompt = userArgs || "Merhaba! Kendini kısaca tanıt ve maceracılara selam ver.";
+        const rawSystemPrompt = cmd.system_prompt || cmd.response;
+
+        // Parse variables in prompts before sending to AI for ultimate channel integrations
+        const systemPrompt = await processVariables(channelId, rawSystemPrompt, sender);
+        const userPrompt = await processVariables(channelId, rawUserPrompt, sender);
+
         response = await generateAIResponse(userPrompt, systemPrompt);
     }
 
@@ -240,7 +245,7 @@ async function generateAIResponse(userPrompt, systemPrompt = null) {
                 'Authorization': 'Bearer unused'
             },
             body: JSON.stringify({
-                model: 'grok-3-mini-high',
+                model: 'GLM-4.6V-Flash',
                 messages: messages
             })
         });

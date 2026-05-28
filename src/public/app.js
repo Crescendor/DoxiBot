@@ -1216,12 +1216,8 @@ function openAddCustomCmdModal() {
         <input type="text" id="new-cmd-name" class="input" placeholder="!selam" value="!">
       </div>
       <div class="form-group">
-        <label>Varsayılan Cevap (AI çalışmazsa veya fallback için)</label>
+        <label id="new-cmd-response-label">Normal Komut Yanıtı (Cevap)</label>
         <textarea id="new-cmd-response" class="input" rows="3" placeholder="Merhaba {bahset}!"></textarea>
-      </div>
-      <div class="form-group" id="new-cmd-system-prompt-group" style="display: none;">
-        <label>🤖 Sistem Promptu (Yapay Zeka Rolü/Kuralları)</label>
-        <textarea id="new-cmd-system-prompt" class="input" rows="3" placeholder="Sen bu kanalın bilge büyücüsüsün. Samimi ve Türkçe cevap ver."></textarea>
       </div>
       <div class="form-group">
         <label>👑 Abone/Mod Özel Cevabı (boş bırakılabilir)</label>
@@ -1240,7 +1236,7 @@ function openAddCustomCmdModal() {
         <label class="checkbox"><input type="checkbox" id="new-cmd-enabled" checked> ✅ Aktif</label>
         <label class="checkbox"><input type="checkbox" id="new-cmd-is-ai" onchange="toggleSystemPrompt('new')"> 🤖 AI Komutu</label>
       </div>
-      <div style="font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 8px;">* AI Komutu açıldığında, yapay zeka "Sistem Promptu" kurallarına göre cevap üretir. Kullanıcının komut yanına yazdığı mesajlar ise soru olarak yapay zekaya iletilir.</div>
+      <div style="font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 8px;">* AI Komutu açıldığında, "Cevap" alanı yapay zeka için "Sistem Promptu" (rol ve kurallar) yerine geçer. Kullanıcının komut yanına yazdığı mesajlar ise soru olarak iletilir.</div>
     </div>
 
     <div id="tab-users" class="tab-content">
@@ -1272,7 +1268,7 @@ async function saveNewCustomCmd() {
   const cooldown = parseInt(document.getElementById('new-cmd-cooldown').value) || 0;
   const cooldown_message = document.getElementById('new-cmd-cooldown-message').value || '';
   const is_ai = document.getElementById('new-cmd-is-ai').checked;
-  const system_prompt = document.getElementById('new-cmd-system-prompt').value || null;
+  const system_prompt = is_ai ? response : null;
 
   if (!command || !response) {
     showNotification('Komut ve cevap gerekli!', 'error');
@@ -1311,9 +1307,17 @@ function switchTab(btn, tabId) {
 
 function toggleSystemPrompt(type) {
   const isAi = document.getElementById(`${type}-cmd-is-ai`).checked;
-  const group = document.getElementById(`${type}-cmd-system-prompt-group`);
-  if (group) {
-    group.style.display = isAi ? 'block' : 'none';
+  const label = document.getElementById(`${type}-cmd-response-label`);
+  const textarea = document.getElementById(`${type}-cmd-response`);
+  
+  if (label && textarea) {
+    if (isAi) {
+      label.innerHTML = '🤖 Yapay Zeka Sistem Promptu (Rol ve Kurallar)';
+      textarea.placeholder = 'Örn: Sen bu kanalın neşeli büyücüsüsün. Samimi ve Türkçe cevaplar ver. Emojiler kullan.';
+    } else {
+      label.innerHTML = 'Normal Komut Yanıtı (Cevap)';
+      textarea.placeholder = 'Merhaba {bahset}!';
+    }
   }
 }
 
@@ -1375,12 +1379,8 @@ function editCustomCmd(command) {
     
     <div id="tab-general" class="tab-content active">
       <div class="form-group">
-        <label>Varsayılan Cevap</label>
-        <textarea id="edit-cmd-response" class="input" rows="3">${esc(cmd.response)}</textarea>
-      </div>
-      <div class="form-group" id="edit-cmd-system-prompt-group" style="display: ${isAi ? 'block' : 'none'};">
-        <label>🤖 Sistem Promptu (Yapay Zeka Rolü/Kuralları)</label>
-        <textarea id="edit-cmd-system-prompt" class="input" rows="3" placeholder="Sen bu kanalın bilge büyücüsüsün. Samimi ve Türkçe cevap ver.">${esc(cmd.system_prompt || '')}</textarea>
+        <label id="edit-cmd-response-label">${isAi ? '🤖 Yapay Zeka Sistem Promptu (Rol ve Kurallar)' : 'Normal Komut Yanıtı (Cevap)'}</label>
+        <textarea id="edit-cmd-response" class="input" rows="3" placeholder="${isAi ? 'Örn: Sen bu kanalın neşeli büyücüsüsün...' : 'Merhaba {bahset}!'}">${esc(isAi ? (cmd.system_prompt || cmd.response) : cmd.response)}</textarea>
       </div>
       <div class="form-group">
         <label>👑 Abone/Mod Özel Cevabı</label>
@@ -1399,7 +1399,7 @@ function editCustomCmd(command) {
         <label class="checkbox"><input type="checkbox" id="edit-cmd-enabled" ${cmd.enabled ? 'checked' : ''}> ✅ Aktif</label>
         <label class="checkbox"><input type="checkbox" id="edit-cmd-is-ai" ${isAi ? 'checked' : ''} onchange="toggleSystemPrompt('edit')"> 🤖 AI Komutu</label>
       </div>
-      <div style="font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 8px;">* AI Komutu açıldığında, yapay zeka "Sistem Promptu" kurallarına göre cevap üretir. Kullanıcının komut yanına yazdığı mesajlar ise soru olarak yapay zekaya iletilir.</div>
+      <div style="font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 8px;">* AI Komutu açıldığında, "Cevap" alanı yapay zeka için "Sistem Promptu" (rol ve kurallar) yerine geçer. Kullanıcının komut yanına yazdığı mesajlar ise soru olarak iletimir.</div>
     </div>
     
     <div id="tab-users" class="tab-content">
@@ -1428,7 +1428,7 @@ async function saveEditCustomCmd(command) {
   const cooldown = parseInt(document.getElementById('edit-cmd-cooldown').value) || 0;
   const cooldown_message = document.getElementById('edit-cmd-cooldown-message').value || '';
   const is_ai = document.getElementById('edit-cmd-is-ai').checked;
-  const system_prompt = document.getElementById('edit-cmd-system-prompt').value || null;
+  const system_prompt = is_ai ? response : null;
 
   if (!response) {
     showNotification('Cevap gerekli!', 'error');
