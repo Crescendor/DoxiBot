@@ -270,6 +270,33 @@ async function initDatabase() {
         END IF;
       END $$;
 
+      -- Add ai_model column to custom_commands if not exists
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name = 'custom_commands' AND column_name = 'ai_model') THEN
+          ALTER TABLE custom_commands ADD COLUMN ai_model TEXT DEFAULT 'grok-3';
+        END IF;
+      END $$;
+
+      -- Add ai_temperature column to custom_commands if not exists
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name = 'custom_commands' AND column_name = 'ai_temperature') THEN
+          ALTER TABLE custom_commands ADD COLUMN ai_temperature DOUBLE PRECISION DEFAULT 0.85;
+        END IF;
+      END $$;
+
+      -- Add ai_nsfw column to custom_commands if not exists
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                       WHERE table_name = 'custom_commands' AND column_name = 'ai_nsfw') THEN
+          ALTER TABLE custom_commands ADD COLUMN ai_nsfw INTEGER DEFAULT 0;
+        END IF;
+      END $$;
+
       -- Command counters (for {sayaç} variable)
       CREATE TABLE IF NOT EXISTS command_counters (
         channel_id BIGINT NOT NULL,
@@ -825,8 +852,8 @@ export const db = {
     },
     async upsertCustomCommand(channelId, command, data) {
         await pool.query(`
-            INSERT INTO custom_commands (channel_id, command, response, sub_response, user_responses, reply_to_user, enabled, cooldown, cooldown_message, is_ai, system_prompt)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            INSERT INTO custom_commands (channel_id, command, response, sub_response, user_responses, reply_to_user, enabled, cooldown, cooldown_message, is_ai, system_prompt, ai_model, ai_temperature, ai_nsfw)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             ON CONFLICT (channel_id, command) DO UPDATE SET
                 response = $3,
                 sub_response = $4,
@@ -836,8 +863,26 @@ export const db = {
                 cooldown = $8,
                 cooldown_message = $9,
                 is_ai = $10,
-                system_prompt = $11
-        `, [channelId, command.toLowerCase(), data.response, data.sub_response || null, data.user_responses || null, data.reply_to_user ? 1 : 0, data.enabled ? 1 : 0, parseInt(data.cooldown) || 0, data.cooldown_message || null, data.is_ai ? 1 : 0, data.system_prompt || null]);
+                system_prompt = $11,
+                ai_model = $12,
+                ai_temperature = $13,
+                ai_nsfw = $14
+        `, [
+            channelId, 
+            command.toLowerCase(), 
+            data.response, 
+            data.sub_response || null, 
+            data.user_responses || null, 
+            data.reply_to_user ? 1 : 0, 
+            data.enabled ? 1 : 0, 
+            parseInt(data.cooldown) || 0, 
+            data.cooldown_message || null, 
+            data.is_ai ? 1 : 0, 
+            data.system_prompt || null,
+            data.ai_model || 'grok-3',
+            data.ai_temperature !== undefined && data.ai_temperature !== null ? parseFloat(data.ai_temperature) : 0.85,
+            data.ai_nsfw ? 1 : 0
+        ]);
     },
     async deleteCustomCommand(channelId, command) {
         await pool.query('DELETE FROM custom_commands WHERE channel_id = $1 AND command = $2', [channelId, command.toLowerCase()]);

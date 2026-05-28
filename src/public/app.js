@@ -1236,6 +1236,26 @@ function openAddCustomCmdModal() {
         <label class="checkbox"><input type="checkbox" id="new-cmd-enabled" checked> ✅ Aktif</label>
         <label class="checkbox"><input type="checkbox" id="new-cmd-is-ai" onchange="toggleSystemPrompt('new')"> 🤖 AI Komutu</label>
       </div>
+
+      <div id="new-cmd-ai-settings" style="display: none; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; margin-top: 10px; margin-bottom: 12px; background: rgba(0,0,0,0.2);">
+        <div style="font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #888;">🤖 Yapay Zeka Ayarları</div>
+        <div class="form-row" style="margin-bottom: 8px; gap: 12px; display: flex;">
+          <div class="form-group" style="flex: 1; display: flex; flex-direction: column;">
+            <label style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Model Seçimi</label>
+            <select id="new-cmd-ai-model" class="input" style="width: 100%;">
+              <option value="grok-3" selected>grok-3 (En Akıllı)</option>
+              <option value="GLM-4.6V-Flash">GLM-4.6V-Flash (Hızlı)</option>
+              <option value="codestral-latest">codestral-latest (Mistral)</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex: 1; display: flex; flex-direction: column;">
+            <label style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Yaratıcılık / Temperature</label>
+            <input type="number" id="new-cmd-ai-temp" class="input" min="0.1" max="1.5" step="0.05" value="0.85" style="width: 100%;">
+          </div>
+        </div>
+        <label class="checkbox" style="display: flex; align-items: center; gap: 6px;"><input type="checkbox" id="new-cmd-ai-nsfw"> 🤬 Küfür / Argo serbest bırakılsın</label>
+      </div>
+
       <div style="font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 8px;">* AI Komutu açıldığında, "Cevap" alanı yapay zeka için "Sistem Promptu" (rol ve kurallar) yerine geçer. Kullanıcının komut yanına yazdığı mesajlar ise soru olarak iletilir.</div>
     </div>
 
@@ -1269,6 +1289,9 @@ async function saveNewCustomCmd() {
   const cooldown_message = document.getElementById('new-cmd-cooldown-message').value || '';
   const is_ai = document.getElementById('new-cmd-is-ai').checked;
   const system_prompt = is_ai ? response : null;
+  const ai_model = is_ai ? document.getElementById('new-cmd-ai-model').value : 'grok-3';
+  const ai_temperature = is_ai ? parseFloat(document.getElementById('new-cmd-ai-temp').value) : 0.85;
+  const ai_nsfw = is_ai ? document.getElementById('new-cmd-ai-nsfw').checked : false;
 
   if (!command || !response) {
     showNotification('Komut ve cevap gerekli!', 'error');
@@ -1287,7 +1310,10 @@ async function saveNewCustomCmd() {
       cooldown,
       cooldown_message,
       is_ai,
-      system_prompt
+      system_prompt,
+      ai_model,
+      ai_temperature,
+      ai_nsfw
     })
   });
 
@@ -1309,6 +1335,11 @@ function toggleSystemPrompt(type) {
   const isAi = document.getElementById(`${type}-cmd-is-ai`).checked;
   const label = document.getElementById(`${type}-cmd-response-label`);
   const textarea = document.getElementById(`${type}-cmd-response`);
+  const aiSettings = document.getElementById(`${type}-cmd-ai-settings`);
+  
+  if (aiSettings) {
+    aiSettings.style.display = isAi ? 'block' : 'none';
+  }
   
   if (label && textarea) {
     if (isAi) {
@@ -1399,6 +1430,26 @@ function editCustomCmd(command) {
         <label class="checkbox"><input type="checkbox" id="edit-cmd-enabled" ${cmd.enabled ? 'checked' : ''}> ✅ Aktif</label>
         <label class="checkbox"><input type="checkbox" id="edit-cmd-is-ai" ${isAi ? 'checked' : ''} onchange="toggleSystemPrompt('edit')"> 🤖 AI Komutu</label>
       </div>
+
+      <div id="edit-cmd-ai-settings" style="display: ${isAi ? 'block' : 'none'}; border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 8px; margin-top: 10px; margin-bottom: 12px; background: rgba(0,0,0,0.2);">
+        <div style="font-size: 13px; font-weight: bold; margin-bottom: 8px; color: #888;">🤖 Yapay Zeka Ayarları</div>
+        <div class="form-row" style="margin-bottom: 8px; gap: 12px; display: flex;">
+          <div class="form-group" style="flex: 1; display: flex; flex-direction: column;">
+            <label style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Model Seçimi</label>
+            <select id="edit-cmd-ai-model" class="input" style="width: 100%;">
+              <option value="grok-3" ${cmd.ai_model === 'grok-3' || !cmd.ai_model ? 'selected' : ''}>grok-3 (En Akıllı)</option>
+              <option value="GLM-4.6V-Flash" ${cmd.ai_model === 'GLM-4.6V-Flash' ? 'selected' : ''}>GLM-4.6V-Flash (Hızlı)</option>
+              <option value="codestral-latest" ${cmd.ai_model === 'codestral-latest' ? 'selected' : ''}>codestral-latest (Mistral)</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex: 1; display: flex; flex-direction: column;">
+            <label style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Yaratıcılık / Temperature</label>
+            <input type="number" id="edit-cmd-ai-temp" class="input" min="0.1" max="1.5" step="0.05" value="${cmd.ai_temperature !== undefined && cmd.ai_temperature !== null ? cmd.ai_temperature : 0.85}" style="width: 100%;">
+          </div>
+        </div>
+        <label class="checkbox" style="display: flex; align-items: center; gap: 6px;"><input type="checkbox" id="edit-cmd-ai-nsfw" ${cmd.ai_nsfw === 1 ? 'checked' : ''}> 🤬 Küfür / Argo serbest bırakılsın</label>
+      </div>
+
       <div style="font-size: 11px; color: #888; margin-top: -6px; margin-bottom: 8px;">* AI Komutu açıldığında, "Cevap" alanı yapay zeka için "Sistem Promptu" (rol ve kurallar) yerine geçer. Kullanıcının komut yanına yazdığı mesajlar ise soru olarak iletimir.</div>
     </div>
     
@@ -1429,6 +1480,9 @@ async function saveEditCustomCmd(command) {
   const cooldown_message = document.getElementById('edit-cmd-cooldown-message').value || '';
   const is_ai = document.getElementById('edit-cmd-is-ai').checked;
   const system_prompt = is_ai ? response : null;
+  const ai_model = is_ai ? document.getElementById('edit-cmd-ai-model').value : 'grok-3';
+  const ai_temperature = is_ai ? parseFloat(document.getElementById('edit-cmd-ai-temp').value) : 0.85;
+  const ai_nsfw = is_ai ? document.getElementById('edit-cmd-ai-nsfw').checked : false;
 
   if (!response) {
     showNotification('Cevap gerekli!', 'error');
@@ -1447,7 +1501,10 @@ async function saveEditCustomCmd(command) {
       cooldown,
       cooldown_message,
       is_ai,
-      system_prompt
+      system_prompt,
+      ai_model,
+      ai_temperature,
+      ai_nsfw
     })
   });
 

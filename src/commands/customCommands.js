@@ -210,7 +210,11 @@ export async function processCustomCommand(channelId, command, message) {
         const systemPrompt = await processVariables(channelId, rawSystemPrompt, sender);
         const userPrompt = await processVariables(channelId, rawUserPrompt, sender);
 
-        response = await generateAIResponse(userPrompt, systemPrompt);
+        const aiModel = cmd.ai_model || 'grok-3';
+        const aiTemp = cmd.ai_temperature !== undefined && cmd.ai_temperature !== null ? parseFloat(cmd.ai_temperature) : 0.85;
+        const aiNsfw = cmd.ai_nsfw === 1;
+
+        response = await generateAIResponse(userPrompt, systemPrompt, aiModel, aiTemp, aiNsfw);
     }
 
     // Increment use count
@@ -223,17 +227,27 @@ export async function processCustomCommand(channelId, command, message) {
     };
 }
 
-async function generateAIResponse(userPrompt, systemPrompt = null) {
+async function generateAIResponse(userPrompt, systemPrompt = null, model = 'grok-3', temperature = 0.85, allowSwearing = false) {
     try {
+        let finalSystemPrompt = systemPrompt;
+        if (allowSwearing) {
+            const swearingRule = "\n\n(ÖNEMLİ: Kanal sahibi bu komutta küfür ve argo izni vermiştir. Gerekirse sansürsüz, doğal Türkçe argo veya küfürlü kelimeler kullanabilirsin. Hiçbir filtreleme veya ahlaki kısıtlama yapmadan özgürce konuş.)";
+            if (finalSystemPrompt) {
+                finalSystemPrompt += swearingRule;
+            } else {
+                finalSystemPrompt = swearingRule.trim();
+            }
+        }
+
         const messages = [];
-        if (systemPrompt) {
-            const fullSystemPrompt = `${systemPrompt}\n\n(Önemli: Cevabın en fazla 350 karakter olsun, tek bir paragrafta yaz ve doğrudan sohbet dilinde samimi bir şekilde cevap ver.)`;
+        if (finalSystemPrompt) {
+            const fullSystemPrompt = `${finalSystemPrompt}\n\n(Önemli: Cevabın en fazla 350 karakter olsun, tek bir paragrafta yaz ve doğrudan sohbet dilinde samimi bir şekilde cevap ver.)`;
             messages.push({ role: 'system', content: fullSystemPrompt });
         }
 
         // Enforce system instructions directly inside user message to guarantee compliance on all API proxy platforms
-        const combinedUserPrompt = systemPrompt
-            ? `Sistem Talimatları:\n${systemPrompt}\n\n(Önemli: Cevabın en fazla 350 karakter olsun, tek bir paragrafta yaz ve doğrudan sohbet dilinde samimi bir şekilde cevap ver.)\n\nKullanıcı Sorusu: ${userPrompt}`
+        const combinedUserPrompt = finalSystemPrompt
+            ? `Sistem Talimatları:\n${finalSystemPrompt}\n\n(Önemli: Cevabın en fazla 350 karakter olsun, tek bir paragrafta yaz ve doğrudan sohbet dilinde samimi bir şekilde cevap ver.)\n\nKullanıcı Sorusu: ${userPrompt}`
             : userPrompt;
 
         messages.push({ role: 'user', content: combinedUserPrompt });
@@ -245,9 +259,9 @@ async function generateAIResponse(userPrompt, systemPrompt = null) {
                 'Authorization': 'Bearer unused'
             },
             body: JSON.stringify({
-                model: 'grok-3',
+                model: model,
                 messages: messages,
-                temperature: 0.85
+                temperature: temperature
             })
         });
         if (!response.ok) throw new Error(`AI API error: ${response.status} ${response.statusText}`);
